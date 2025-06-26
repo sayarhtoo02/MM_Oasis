@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:munajat_e_maqbool_app/screens/home_screen.dart';
-import 'package:munajat_e_maqbool_app/screens/dua_preferences_screen.dart';
+import 'package:munajat_e_maqbool_app/screens/bookmarks_screen.dart';
+import 'package:munajat_e_maqbool_app/screens/search_screen.dart';
 import 'package:munajat_e_maqbool_app/screens/settings_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -15,7 +16,8 @@ class _MainScreenState extends State<MainScreen> {
 
   static final List<Widget> _widgetOptions = <Widget>[
     const HomeScreen(),
-    const DuaPreferencesScreen(), // This will serve as the Bookmarks/Last Read screen
+    const BookmarksScreen(),
+    const SearchScreen(),
     const SettingsScreen(),
   ];
 
@@ -32,6 +34,7 @@ class _MainScreenState extends State<MainScreen> {
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, // Added for more than 3 items
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -42,12 +45,17 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Bookmarks',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), // Added for better visibility
         onTap: _onItemTapped,
       ),
     );

@@ -15,9 +15,48 @@ import 'package:munajat_e_maqbool_app/screens/main_screen.dart'; // Import MainS
 import 'package:munajat_e_maqbool_app/screens/home_screen.dart'; // Import HomeScreen
 import 'package:munajat_e_maqbool_app/screens/bookmarks_screen.dart'; // Import BookmarksScreen
 import 'package:munajat_e_maqbool_app/screens/search_screen.dart'; // Import SearchScreen
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // Import notifications
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) {
+  // handle action when app is in background
+  debugPrint('notificationTapBackground: ${notificationResponse.payload}');
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notifications
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('app_icon'); // Replace 'app_icon' with your app's icon name
+  const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) async {
+      // Handle notification tap when app is in foreground
+      debugPrint('onDidReceiveNotificationResponse: ${notificationResponse.payload}');
+    },
+    onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+  );
+
+  // Request permissions for Android 13+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.requestNotificationsPermission();
+
   final duaProvider = DuaProvider();
   await duaProvider.loadAllDuas();
 

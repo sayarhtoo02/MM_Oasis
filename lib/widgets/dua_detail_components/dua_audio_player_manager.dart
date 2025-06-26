@@ -10,6 +10,10 @@ class DuaAudioPlayerManager extends StatefulWidget {
     Duration position,
     VoidCallback onPlayPausePressed,
     ValueChanged<double> onSliderChanged,
+    bool isLooping, // New
+    VoidCallback onToggleLoop, // New
+    double playbackSpeed, // New
+    ValueChanged<double> onSpeedChanged, // New
   ) builder;
 
   const DuaAudioPlayerManager({
@@ -27,6 +31,8 @@ class _DuaAudioPlayerManagerState extends State<DuaAudioPlayerManager> {
   PlayerState _playerState = PlayerState.stopped;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
+  bool _isLooping = false; // New: for looping
+  double _playbackSpeed = 1.0; // New: for playback speed
 
   @override
   void initState() {
@@ -64,10 +70,15 @@ class _DuaAudioPlayerManagerState extends State<DuaAudioPlayerManager> {
     });
 
     _audioPlayer.onPlayerComplete.listen((event) {
-      setState(() {
-        _playerState = PlayerState.stopped;
-        _position = Duration.zero;
-      });
+      if (_isLooping) {
+        _audioPlayer.seek(Duration.zero);
+        _audioPlayer.resume();
+      } else {
+        setState(() {
+          _playerState = PlayerState.stopped;
+          _position = Duration.zero;
+        });
+      }
     });
   }
 
@@ -77,6 +88,7 @@ class _DuaAudioPlayerManagerState extends State<DuaAudioPlayerManager> {
     try {
       await _audioPlayer.stop(); // Stop any currently playing audio
       await _audioPlayer.setSourceAsset(audioPath);
+      await _audioPlayer.setPlaybackRate(_playbackSpeed); // Set initial playback speed
       _position = Duration.zero; // Reset position when loading new audio
       _duration = (await _audioPlayer.getDuration()) ?? Duration.zero;
       setState(() {
@@ -110,6 +122,19 @@ class _DuaAudioPlayerManagerState extends State<DuaAudioPlayerManager> {
     await _audioPlayer.seek(position);
   }
 
+  void _toggleLoop() {
+    setState(() {
+      _isLooping = !_isLooping;
+    });
+  }
+
+  void _setPlaybackSpeed(double speed) async {
+    setState(() {
+      _playbackSpeed = speed;
+    });
+    await _audioPlayer.setPlaybackRate(speed);
+  }
+
   @override
   void dispose() {
     _audioPlayer.dispose();
@@ -124,6 +149,10 @@ class _DuaAudioPlayerManagerState extends State<DuaAudioPlayerManager> {
       _position,
       _onPlayPausePressed,
       _onSliderChanged,
+      _isLooping, // Pass new parameters
+      _toggleLoop, // Pass new parameters
+      _playbackSpeed, // Pass new parameters
+      _setPlaybackSpeed, // Pass new parameters
     );
   }
 }

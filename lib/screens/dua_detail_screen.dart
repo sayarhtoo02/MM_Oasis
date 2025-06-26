@@ -96,7 +96,9 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
             setState(() {
               _currentPageIndex = index;
             });
-            settingsProvider.setLastReadDua(widget.manzilDuas[index]);
+            final currentDua = widget.manzilDuas[index];
+            settingsProvider.setLastReadDua(currentDua);
+            settingsProvider.setManzilProgress(currentDua.manzilNumber, currentDua.id);
           },
           itemBuilder: (context, index) {
             final dua = widget.manzilDuas[index];
@@ -113,13 +115,17 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
                   const SizedBox(height: 25),
                   DuaAudioPlayerManager(
                     currentDua: dua,
-                    builder: (playerState, duration, position, onPlayPausePressed, onSliderChanged) {
+                    builder: (playerState, duration, position, onPlayPausePressed, onSliderChanged, isLooping, onToggleLoop, playbackSpeed, onSpeedChanged) {
                       return AudioPlayerControls(
                         playerState: playerState,
                         duration: duration,
                         position: position,
                         onPlayPausePressed: onPlayPausePressed,
                         onSliderChanged: onSliderChanged,
+                        isLooping: isLooping,
+                        onToggleLoop: onToggleLoop,
+                        playbackSpeed: playbackSpeed,
+                        onSpeedChanged: onSpeedChanged,
                       );
                     },
                   ),

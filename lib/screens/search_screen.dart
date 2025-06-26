@@ -19,6 +19,12 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Dua> _searchResults = [];
   Timer? _debounce;
+  int? _selectedManzilFilter; // New state variable for Manzil filter
+
+  final List<String> _manzilOptions = [
+    'All Manzils',
+    "Manzil 1", "Manzil 2", "Manzil 3", "Manzil 4", "Manzil 5", "Manzil 6", "Manzil 7",
+  ];
 
   @override
   void initState() {
@@ -73,13 +79,15 @@ class _SearchScreenState extends State<SearchScreen> {
         final burmeseMatch = burmeseTranslation.contains(lowerCaseQuery);
         final urduMatch = urduTranslation.contains(lowerCaseQuery);
 
-        debugPrint('Dua ID: ${dua.id}, Arabic: "$arabicText", English: "$englishTranslation"');
-        debugPrint('Matches: Arabic=$arabicMatch, English=$englishMatch, Burmese=$burmeseMatch, Urdu=$urduMatch');
+        final manzilMatch = _selectedManzilFilter == null || dua.manzilNumber == _selectedManzilFilter;
 
-        return arabicMatch || englishMatch || burmeseMatch || urduMatch;
+        debugPrint('Dua ID: ${dua.id}, Arabic: "$arabicText", English: "$englishTranslation"');
+        debugPrint('Matches: Arabic=$arabicMatch, English=$englishMatch, Burmese=$burmeseMatch, Urdu=$urduMatch, Manzil=$manzilMatch');
+
+        return (arabicMatch || englishMatch || burmeseMatch || urduMatch) && manzilMatch;
       }).toList();
     });
-    debugPrint('Found ${_searchResults.length} results for query: "$query"');
+    debugPrint('Found ${_searchResults.length} results for query: "$query" with Manzil filter: ${_selectedManzilFilter ?? 'All'}');
   }
 
   String _getTranslationText(Translations translations, String languageCode) {
@@ -127,20 +135,43 @@ class _SearchScreenState extends State<SearchScreen> {
                     : null,
               ),
             ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<int?>(
+              value: _selectedManzilFilter,
+              decoration: InputDecoration(
+                labelText: 'Filter by Manzil',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              items: _manzilOptions.map((String manzil) {
+                final int? value = manzil == 'All Manzils' ? null : int.parse(manzil.split(' ')[1]);
+                return DropdownMenuItem<int?>(
+                  value: value,
+                  child: Text(manzil),
+                );
+              }).toList(),
+              onChanged: (int? newValue) {
+                setState(() {
+                  _selectedManzilFilter = newValue;
+                });
+                _performSearch(_searchController.text);
+              },
+            ),
             const SizedBox(height: 20),
             Expanded(
-              child: _searchResults.isEmpty && _searchController.text.isEmpty
+              child: _searchResults.isEmpty && _searchController.text.isEmpty && _selectedManzilFilter == null
                   ? Center(
                       child: Text(
-                        'Start typing to search for Duas.',
+                        'Start typing to search for Duas or select a Manzil to filter.',
                         style: Theme.of(context).textTheme.titleMedium,
                         textAlign: TextAlign.center,
                       ),
                     )
-                  : _searchResults.isEmpty && _searchController.text.isNotEmpty
+                  : _searchResults.isEmpty && (_searchController.text.isNotEmpty || _selectedManzilFilter != null)
                       ? Center(
                           child: Text(
-                            'No Duas found for "${_searchController.text}".',
+                            'No Duas found for "${_searchController.text}" in Manzil ${_selectedManzilFilter ?? 'All'}.',
                             style: Theme.of(context).textTheme.titleMedium,
                             textAlign: TextAlign.center,
                           ),

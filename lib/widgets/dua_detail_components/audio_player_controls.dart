@@ -7,6 +7,10 @@ class AudioPlayerControls extends StatelessWidget {
   final Duration position;
   final VoidCallback onPlayPausePressed;
   final ValueChanged<double> onSliderChanged;
+  final bool isLooping; // New: for looping
+  final VoidCallback onToggleLoop; // New: for looping
+  final double playbackSpeed; // New: for playback speed
+  final ValueChanged<double> onSpeedChanged; // New: for playback speed
 
   const AudioPlayerControls({
     super.key,
@@ -15,6 +19,10 @@ class AudioPlayerControls extends StatelessWidget {
     required this.position,
     required this.onPlayPausePressed,
     required this.onSliderChanged,
+    required this.isLooping, // Add to constructor
+    required this.onToggleLoop, // Add to constructor
+    required this.playbackSpeed, // Add to constructor
+    required this.onSpeedChanged, // Add to constructor
   });
 
   String _formatDuration(Duration duration) {
@@ -44,8 +52,15 @@ class AudioPlayerControls extends StatelessWidget {
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceAround, // Distribute controls
             children: [
+              IconButton(
+                icon: Icon(
+                  isLooping ? Icons.repeat_one_on : Icons.repeat_one, // Loop icon
+                  color: isLooping ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+                onPressed: onToggleLoop,
+              ),
               IconButton(
                 icon: Icon(
                   playerState == PlayerState.playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
@@ -53,6 +68,23 @@ class AudioPlayerControls extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 onPressed: onPlayPausePressed,
+              ),
+              DropdownButton<double>(
+                value: playbackSpeed,
+                icon: Icon(Icons.speed, color: Theme.of(context).colorScheme.onSurface),
+                underline: const SizedBox.shrink(),
+                onChanged: (double? newValue) {
+                  if (newValue != null) {
+                    onSpeedChanged(newValue);
+                  }
+                },
+                items: const <double>[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+                    .map<DropdownMenuItem<double>>((double value) {
+                  return DropdownMenuItem<double>(
+                    value: value,
+                    child: Text('${value}x', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                  );
+                }).toList(),
               ),
             ],
           ),

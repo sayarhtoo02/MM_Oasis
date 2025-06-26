@@ -52,6 +52,14 @@ class SettingsProvider extends ChangeNotifier {
     ));
   }
 
+  void setManzilProgress(int manzilNumber, String duaId) {
+    final updatedManzilProgress = Map<int, String>.from(_appSettings.duaPreferences.manzilProgress);
+    updatedManzilProgress[manzilNumber] = duaId;
+    updateSettings(_appSettings.copyWith(
+      duaPreferences: _appSettings.duaPreferences.copyWith(manzilProgress: updatedManzilProgress),
+    ));
+  }
+
   void toggleFavoriteDua(Dua dua) {
     final isFavorite = _appSettings.duaPreferences.favoriteDuas.any((d) => d.id == dua.id);
     List<Dua> updatedFavorites = List.from(_appSettings.duaPreferences.favoriteDuas);
