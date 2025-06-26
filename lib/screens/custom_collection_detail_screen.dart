@@ -5,6 +5,8 @@ import 'package:munajat_e_maqbool_app/models/dua_model.dart';
 import 'package:munajat_e_maqbool_app/providers/dua_provider.dart';
 import 'package:munajat_e_maqbool_app/providers/settings_provider.dart';
 import 'package:munajat_e_maqbool_app/widgets/custom_app_bar.dart';
+import 'package:munajat_e_maqbool_app/services/dua_repository.dart'; // Import DuaRepository
+import 'package:munajat_e_maqbool_app/screens/dua_detail_screen.dart'; // Import DuaDetailScreen
 
 class CustomCollectionDetailScreen extends StatefulWidget {
   static const routeName = '/custom-collection-detail';
@@ -59,10 +61,18 @@ class _CustomCollectionDetailScreenState extends State<CustomCollectionDetailScr
                         settingsProvider.removeDuaFromCustomCollection(currentCollection.id, dua.id);
                       },
                     ),
-                    onTap: () {
-                      // TODO: Navigate to Dua detail screen for this Dua
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Tapped on Dua: ${dua.id}')),
+                    onTap: () async {
+                      final duaRepository = DuaRepository();
+                      final manzilDuas = await duaRepository.getDuasByManzil(dua.manzilNumber);
+                      if (!context.mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DuaDetailScreen(
+                            initialDua: dua,
+                            manzilDuas: manzilDuas,
+                          ),
+                        ),
                       );
                     },
                   ),
