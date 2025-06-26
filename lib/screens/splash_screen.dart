@@ -16,7 +16,7 @@ class _SplashScreenState extends State<SplashScreen> {
     _navigateToMainScreen();
   }
 
-  _navigateToMainScreen() async {
+  Future<void> _navigateToMainScreen() async {
     await Future.delayed(const Duration(milliseconds: 4000), () {});
     Navigator.pushReplacement(
       context,
