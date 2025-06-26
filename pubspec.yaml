@@ -43,6 +43,7 @@ dependencies:
   animated_text_kit: ^4.2.2 # For animated text
   intl: ^0.20.2 # For date formatting
   flutter_local_notifications: ^17.1.2 # For local notifications
+  timezone: ^0.9.2 # For timezone support in notifications
 
 dev_dependencies:
   flutter_test:

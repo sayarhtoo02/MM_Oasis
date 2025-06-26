@@ -26,6 +26,8 @@ class DuaDetailScreen extends StatefulWidget {
 class _DuaDetailScreenState extends State<DuaDetailScreen> {
   late PageController _pageController;
   late int _currentPageIndex;
+  late TextEditingController _notesController;
+
   @override
   void initState() {
     super.initState();
@@ -33,12 +35,28 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
     int initialIndex = widget.manzilDuas.indexWhere((dua) => dua.id == widget.initialDua.id);
     _currentPageIndex = initialIndex != -1 ? initialIndex : 0;
     _pageController = PageController(initialPage: _currentPageIndex);
+
+    // Initialize notes controller with current dua's note
+    _notesController = TextEditingController();
+    _loadDuaNote(widget.manzilDuas[_currentPageIndex].id);
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _notesController.dispose();
     super.dispose();
+  }
+
+  void _loadDuaNote(String duaId) {
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    final note = settingsProvider.getDuaNote(duaId);
+    _notesController.text = note ?? '';
+  }
+
+  void _saveDuaNote(String duaId, String note) {
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    settingsProvider.setDuaNote(duaId, note);
   }
 
   void _copyDuaText(Dua dua, String selectedLanguage) {
@@ -99,6 +117,7 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
             final currentDua = widget.manzilDuas[index];
             settingsProvider.setLastReadDua(currentDua);
             settingsProvider.setManzilProgress(currentDua.manzilNumber, currentDua.id);
+            _loadDuaNote(currentDua.id); // Load note for the new Dua
           },
           itemBuilder: (context, index) {
             final dua = widget.manzilDuas[index];
@@ -127,6 +146,33 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
                         playbackSpeed: playbackSpeed,
                         onSpeedChanged: onSpeedChanged,
                       );
+                    },
+                  ),
+                  const SizedBox(height: 25),
+                  Text(
+                    'Notes',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _notesController,
+                    maxLines: null, // Allows for multiline input
+                    keyboardType: TextInputType.multiline,
+                    decoration: InputDecoration(
+                      hintText: 'Add your personal notes here...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surfaceContainer,
+                      contentPadding: const EdgeInsets.all(16.0),
+                    ),
+                    onChanged: (text) {
+                      _saveDuaNote(dua.id, text);
                     },
                   ),
                 ],

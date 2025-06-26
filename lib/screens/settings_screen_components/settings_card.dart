@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class SettingsCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
+  final String? title;
+  final IconData? icon;
   final List<Widget>? children;
+  final Widget? child; // New: for direct child widget
   final VoidCallback? onTap;
 
   const SettingsCard({
     super.key,
-    required this.title,
-    required this.icon,
+    this.title,
+    this.icon,
     this.children,
+    this.child, // Add to constructor
     this.onTap,
-  });
+  }) : assert(
+          (title != null && icon != null) || child != null,
+          'Either title and icon must be provided, or a child widget must be provided.',
+        );
 
   @override
   Widget build(BuildContext context) {
@@ -42,31 +47,32 @@ class SettingsCard extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+          child: child ??
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, size: 32, color: colorScheme.primary),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
+                  Row(
+                    children: [
+                      Icon(icon, size: 32, color: colorScheme.primary),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Text(
+                          title!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
+                  if (children != null && children!.isNotEmpty) ...[
+                    Divider(height: 30, thickness: 1.5, color: colorScheme.primary.withAlpha((0.5 * 255).round())),
+                    ...children!,
+                  ],
                 ],
               ),
-              if (children != null && children!.isNotEmpty) ...[
-                Divider(height: 30, thickness: 1.5, color: colorScheme.primary.withAlpha((0.5 * 255).round())),
-                ...children!,
-              ],
-            ],
-          ),
         ),
       ),
     );

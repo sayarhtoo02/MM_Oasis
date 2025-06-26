@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/settings_provider.dart';
-import '../models/display_settings.dart'; // Import DisplaySettings directly
+import '../config/app_constants.dart'; // Import AppThemeMode and AppAccentColor
 import '../screens/settings_screen_components/arabic_font_size_section.dart';
 import '../screens/settings_screen_components/translation_font_size_section.dart';
 import '../screens/settings_screen_components/theme_selection_section.dart';
+import '../screens/settings_screen_components/color_selection_section.dart'; // New import
 
 class DisplaySettingsScreen extends StatelessWidget {
   const DisplaySettingsScreen({super.key});
@@ -26,10 +27,10 @@ class DisplaySettingsScreen extends StatelessWidget {
         backgroundColor: colorScheme.primary,
         iconTheme: IconThemeData(color: colorScheme.onPrimary),
       ),
-      body: Selector<SettingsProvider, DisplaySettings>(
-        selector: (context, provider) => provider.appSettings.displaySettings,
-        builder: (context, displaySettings, child) {
-          final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+      body: Consumer<SettingsProvider>(
+        builder: (context, settingsProvider, child) {
+          final appSettings = settingsProvider.appSettings;
+          final displaySettings = appSettings.displaySettings;
           return Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -42,13 +43,22 @@ class DisplaySettingsScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20.0),
               children: [
                 ThemeSelectionSection(
-                  selectedThemeMode: displaySettings.selectedThemeMode,
+                  selectedThemeMode: appSettings.themeMode,
                   onThemeModeChanged: (newValue) {
                     if (newValue != null) {
-                      settingsProvider.setSelectedThemeMode(newValue);
+                      settingsProvider.setThemeMode(newValue);
                     }
                   },
                   translationFontSizeMultiplier: displaySettings.translationFontSizeMultiplier,
+                ),
+                const SizedBox(height: 20),
+                ColorSelectionSection(
+                  selectedColor: appSettings.accentColor,
+                  onColorChanged: (newValue) {
+                    if (newValue != null) {
+                      settingsProvider.setAccentColor(newValue);
+                    }
+                  },
                 ),
                 const SizedBox(height: 20),
                 ArabicFontSizeSection(

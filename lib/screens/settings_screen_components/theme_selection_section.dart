@@ -3,11 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/settings_provider.dart';
 import '../../models/app_settings.dart';
+import '../../config/app_constants.dart'; // Import AppThemeMode
 import 'settings_card.dart';
 
 class ThemeSelectionSection extends StatelessWidget {
-  final ThemeMode selectedThemeMode;
-  final ValueChanged<ThemeMode?> onThemeModeChanged;
+  final AppThemeMode selectedThemeMode;
+  final ValueChanged<AppThemeMode?> onThemeModeChanged;
   final double translationFontSizeMultiplier;
 
   const ThemeSelectionSection({
@@ -34,7 +35,7 @@ class ThemeSelectionSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        DropdownButtonFormField<ThemeMode>(
+        DropdownButtonFormField<AppThemeMode>(
           value: selectedThemeMode,
           decoration: InputDecoration(
             border: OutlineInputBorder(
@@ -54,17 +55,17 @@ class ThemeSelectionSection extends StatelessWidget {
             contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
           ),
           onChanged: onThemeModeChanged,
-          items: const <DropdownMenuItem<ThemeMode>>[
-            DropdownMenuItem<ThemeMode>(
-              value: ThemeMode.system,
+          items: const <DropdownMenuItem<AppThemeMode>>[
+            DropdownMenuItem<AppThemeMode>(
+              value: AppThemeMode.system,
               child: Text('System Default'),
             ),
-            DropdownMenuItem<ThemeMode>(
-              value: ThemeMode.light,
+            DropdownMenuItem<AppThemeMode>(
+              value: AppThemeMode.light,
               child: Text('Light'),
             ),
-            DropdownMenuItem<ThemeMode>(
-              value: ThemeMode.dark,
+            DropdownMenuItem<AppThemeMode>(
+              value: AppThemeMode.dark,
               child: Text('Dark'),
             ),
           ],

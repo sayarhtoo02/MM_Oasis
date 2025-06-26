@@ -9,6 +9,7 @@ class Dua {
   final Translations translations;
   final Faida faida;
   final String? audioUrl;
+  final String? notes; // New field for notes/annotations
 
   Dua({
     required this.id,
@@ -20,6 +21,7 @@ class Dua {
     required this.translations,
     required this.faida,
     this.audioUrl,
+    this.notes, // Initialize new field
   });
 
   factory Dua.fromJson(Map<String, dynamic> json) {
@@ -33,6 +35,7 @@ class Dua {
       translations: Translations.fromJson(json['translations'] as Map<String, dynamic>),
       faida: Faida.fromJson(json['faida'] as Map<String, dynamic>),
       audioUrl: json['audio_url'] as String?,
+      notes: json['notes'] as String?, // Deserialize new field
     );
   }
 
@@ -47,6 +50,7 @@ class Dua {
       'translations': translations.toJson(),
       'faida': faida.toJson(),
       'audio_url': audioUrl,
+      'notes': notes, // Serialize new field
     };
   }
 
@@ -62,7 +66,8 @@ class Dua {
         other.arabicText == arabicText &&
         other.translations == translations &&
         other.faida == faida &&
-        other.audioUrl == audioUrl;
+        other.audioUrl == audioUrl &&
+        other.notes == notes; // Compare new field
   }
 
   @override
@@ -76,6 +81,7 @@ class Dua {
         translations,
         faida,
         audioUrl,
+        notes, // Include new field in hash code
       );
 }
 

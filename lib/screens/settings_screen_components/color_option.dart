@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 
 class ColorOption extends StatelessWidget {
   final Color color;
-  final Color currentColor;
-  final Function(Color) onColorChanged;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   const ColorOption({
     super.key,
     required this.color,
-    required this.currentColor,
-    required this.onColorChanged,
+    required this.isSelected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
-      onTap: () => onColorChanged(color),
+      onTap: onTap,
       child: Container(
         width: 40,
         height: 40,
@@ -24,7 +24,7 @@ class ColorOption extends StatelessWidget {
           color: color,
           shape: BoxShape.circle,
           border: Border.all(
-            color: currentColor == color ? colorScheme.primary : Colors.transparent,
+            color: isSelected ? colorScheme.primary : Colors.transparent,
             width: 3,
           ),
           boxShadow: [
@@ -35,7 +35,7 @@ class ColorOption extends StatelessWidget {
             ),
           ],
         ),
-        child: currentColor == color
+        child: isSelected
             ? Icon(Icons.check, color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white)
             : null,
       ),

@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:munajat_e_maqbool_app/config/app_constants.dart';
 
 class AppTheme {
-  static const Color _primaryGreen = Color(0xFF2E7D32); // Deeper, calming green
   static const Color _secondaryAccent = Color(0xFFBCAAA4); // Muted grey-brown/cream
 
   static TextStyle get appBarTextStyle => GoogleFonts.poppins(
-        color: _primaryGreen,
+        color: AppAccentColor.green.color,
         fontSize: 20,
         fontWeight: FontWeight.bold,
       );
 
   static Color get appBarColor => Colors.transparent;
-  static Color get appBarForegroundColor => _primaryGreen;
+  static Color get appBarForegroundColor => AppAccentColor.green.color;
 
-  static ThemeData lightTheme(BuildContext context) {
+  static ThemeData lightTheme(BuildContext context, AppAccentColor accentColor) {
+    final Color primaryColor = accentColor.color;
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: _primaryGreen,
-        primary: _primaryGreen,
+        seedColor: primaryColor,
+        primary: primaryColor,
         onPrimary: Colors.white,
         secondary: _secondaryAccent,
         onSecondary: Colors.black,
@@ -38,9 +39,9 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent, // Minimalist AppBar
         elevation: 0, // No shadow
-        foregroundColor: _primaryGreen, // Use primary color for icons/text
+        foregroundColor: primaryColor, // Use primary color for icons/text
         titleTextStyle: GoogleFonts.poppins(
-          color: _primaryGreen,
+          color: primaryColor,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
@@ -56,13 +57,13 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
-        buttonColor: _primaryGreen,
+        buttonColor: primaryColor,
         textTheme: ButtonTextTheme.primary,
       ),
       sliderTheme: SliderThemeData(
         trackHeight: 8,
-        activeTrackColor: _primaryGreen,
-        inactiveTrackColor: _primaryGreen.withAlpha((0.3 * 255).round()),
+        activeTrackColor: primaryColor,
+        inactiveTrackColor: primaryColor.withAlpha((0.3 * 255).round()),
         thumbColor: _secondaryAccent,
         overlayColor: _secondaryAccent.withAlpha((0.2 * 255).round()),
         valueIndicatorTextStyle: GoogleFonts.poppins(color: Colors.white),
@@ -76,11 +77,12 @@ class AppTheme {
     );
   }
 
-  static ThemeData darkTheme(BuildContext context) {
+  static ThemeData darkTheme(BuildContext context, AppAccentColor accentColor) {
+    final Color primaryColor = accentColor.color;
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: _primaryGreen,
-        primary: _primaryGreen,
+        seedColor: primaryColor,
+        primary: primaryColor,
         onPrimary: Colors.white,
         secondary: _secondaryAccent,
         onSecondary: Colors.black,
@@ -118,13 +120,13 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
-        buttonColor: _primaryGreen,
+        buttonColor: primaryColor,
         textTheme: ButtonTextTheme.primary,
       ),
       sliderTheme: SliderThemeData(
         trackHeight: 8,
-        activeTrackColor: _primaryGreen,
-        inactiveTrackColor: _primaryGreen.withAlpha((0.3 * 255).round()),
+        activeTrackColor: primaryColor,
+        inactiveTrackColor: primaryColor.withAlpha((0.3 * 255).round()),
         thumbColor: _secondaryAccent,
         overlayColor: _secondaryAccent.withAlpha((0.2 * 255).round()),
         valueIndicatorTextStyle: GoogleFonts.poppins(color: Colors.white),

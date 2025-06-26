@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/dua_model.dart';
 import '../../providers/settings_provider.dart';
+import '../../models/custom_collection.dart'; // Import CustomCollection
 
 class DuaDetailAppBarActions extends StatelessWidget {
   final Dua currentDua;
@@ -16,6 +17,84 @@ class DuaDetailAppBarActions extends StatelessWidget {
     required this.onCopyDuaText,
     required this.onShareDuaText,
   });
+
+  void _showAddToCollectionDialog(BuildContext context, Dua dua, SettingsProvider settingsProvider) {
+    final List<CustomCollection> customCollections = settingsProvider.appSettings.duaPreferences.customCollections;
+    TextEditingController newCollectionNameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Add to Collection'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (customCollections.isNotEmpty) ...[
+                  const Text('Select an existing collection:'),
+                  ...customCollections.map((collection) {
+                    final bool isInCollection = collection.duaIds.contains(dua.id);
+                    return CheckboxListTile(
+                      title: Text(collection.name),
+                      value: isInCollection,
+                      onChanged: (bool? value) {
+                        if (value != null) {
+                          if (value) {
+                            // Add dua to collection
+                            if (!isInCollection) {
+                              collection.duaIds.add(dua.id);
+                              settingsProvider.updateCustomCollection(collection);
+                            }
+                          } else {
+                            // Remove dua from collection
+                            if (isInCollection) {
+                              collection.duaIds.remove(dua.id);
+                              settingsProvider.updateCustomCollection(collection);
+                            }
+                          }
+                          Navigator.of(context).pop(); // Close dialog after selection
+                        }
+                      },
+                    );
+                  }).toList(),
+                  const Divider(),
+                ],
+                const Text('Or create a new collection:'),
+                TextField(
+                  controller: newCollectionNameController,
+                  decoration: const InputDecoration(hintText: 'New Collection Name'),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Create & Add'),
+              onPressed: () {
+                final String newName = newCollectionNameController.text.trim();
+                if (newName.isNotEmpty) {
+                  final newCollection = CustomCollection(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    name: newName,
+                    duaIds: [dua.id],
+                  );
+                  settingsProvider.addCustomCollection(newCollection);
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +121,15 @@ class DuaDetailAppBarActions extends StatelessWidget {
               onPressed: () {
                 settingsProvider.toggleFavoriteDua(currentDua);
               },
+            );
+          },
+        ),
+        Consumer<SettingsProvider>(
+          builder: (context, settingsProvider, child) {
+            return IconButton(
+              icon: const Icon(Icons.playlist_add),
+              tooltip: 'Add to Collection',
+              onPressed: () => _showAddToCollectionDialog(context, currentDua, settingsProvider),
             );
           },
         ),

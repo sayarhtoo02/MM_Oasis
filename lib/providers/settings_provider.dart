@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:munajat_e_maqbool_app/models/app_settings.dart';
+import 'package:munajat_e_maqbool_app/models/custom_collection.dart';
 import 'package:munajat_e_maqbool_app/models/dua_model.dart';
 import 'package:munajat_e_maqbool_app/services/settings_repository.dart';
+import 'package:munajat_e_maqbool_app/config/app_constants.dart'; // Import new constants
 
 class SettingsProvider extends ChangeNotifier {
   AppSettings _appSettings;
@@ -39,12 +41,17 @@ class SettingsProvider extends ChangeNotifier {
     ));
   }
 
-  void setSelectedThemeMode(ThemeMode themeMode) {
+  void setThemeMode(AppThemeMode themeMode) {
     updateSettings(_appSettings.copyWith(
-      displaySettings: _appSettings.displaySettings.copyWith(selectedThemeMode: themeMode),
+      themeMode: themeMode,
     ));
   }
 
+  void setAccentColor(AppAccentColor accentColor) {
+    updateSettings(_appSettings.copyWith(
+      accentColor: accentColor,
+    ));
+  }
 
   void setLastReadDua(Dua dua) {
     updateSettings(_appSettings.copyWith(
@@ -71,6 +78,87 @@ class SettingsProvider extends ChangeNotifier {
     updateSettings(_appSettings.copyWith(
       duaPreferences: _appSettings.duaPreferences.copyWith(favoriteDuas: updatedFavorites),
     ));
+  }
+
+  void setReminderSettings({required bool isEnabled, int? hour, int? minute}) {
+    updateSettings(_appSettings.copyWith(
+      isReminderEnabled: isEnabled,
+      reminderHour: hour,
+      reminderMinute: minute,
+    ));
+  }
+
+  void addCustomCollection(CustomCollection collection) {
+    final updatedCollections = List<CustomCollection>.from(_appSettings.duaPreferences.customCollections);
+    updatedCollections.add(collection);
+    updateSettings(_appSettings.copyWith(
+      duaPreferences: _appSettings.duaPreferences.copyWith(customCollections: updatedCollections),
+    ));
+  }
+
+  void removeCustomCollection(String collectionId) {
+    final updatedCollections = List<CustomCollection>.from(_appSettings.duaPreferences.customCollections);
+    updatedCollections.removeWhere((c) => c.id == collectionId);
+    updateSettings(_appSettings.copyWith(
+      duaPreferences: _appSettings.duaPreferences.copyWith(customCollections: updatedCollections),
+    ));
+  }
+
+  void updateCustomCollection(CustomCollection updatedCollection) {
+    final updatedCollections = List<CustomCollection>.from(_appSettings.duaPreferences.customCollections);
+    final index = updatedCollections.indexWhere((c) => c.id == updatedCollection.id);
+    if (index != -1) {
+      updatedCollections[index] = updatedCollection;
+      updateSettings(_appSettings.copyWith(
+        duaPreferences: _appSettings.duaPreferences.copyWith(customCollections: updatedCollections),
+      ));
+    }
+  }
+
+  void addDuaToCustomCollection(String collectionId, String duaId) {
+    final updatedCollections = List<CustomCollection>.from(_appSettings.duaPreferences.customCollections);
+    final index = updatedCollections.indexWhere((c) => c.id == collectionId);
+    if (index != -1) {
+      final collection = updatedCollections[index];
+      if (!collection.duaIds.contains(duaId)) {
+        final updatedDuaIds = List<String>.from(collection.duaIds)..add(duaId);
+        updatedCollections[index] = collection.copyWith(duaIds: updatedDuaIds);
+        updateSettings(_appSettings.copyWith(
+          duaPreferences: _appSettings.duaPreferences.copyWith(customCollections: updatedCollections),
+        ));
+      }
+    }
+  }
+
+  void removeDuaFromCustomCollection(String collectionId, String duaId) {
+    final updatedCollections = List<CustomCollection>.from(_appSettings.duaPreferences.customCollections);
+    final index = updatedCollections.indexWhere((c) => c.id == collectionId);
+    if (index != -1) {
+      final collection = updatedCollections[index];
+      if (collection.duaIds.contains(duaId)) {
+        final updatedDuaIds = List<String>.from(collection.duaIds)..remove(duaId);
+        updatedCollections[index] = collection.copyWith(duaIds: updatedDuaIds);
+        updateSettings(_appSettings.copyWith(
+          duaPreferences: _appSettings.duaPreferences.copyWith(customCollections: updatedCollections),
+        ));
+      }
+    }
+  }
+
+  void setDuaNote(String duaId, String note) {
+    final updatedNotes = Map<String, String>.from(_appSettings.duaPreferences.duaNotes);
+    if (note.isEmpty) {
+      updatedNotes.remove(duaId); // Remove note if empty
+    } else {
+      updatedNotes[duaId] = note;
+    }
+    updateSettings(_appSettings.copyWith(
+      duaPreferences: _appSettings.duaPreferences.copyWith(duaNotes: updatedNotes),
+    ));
+  }
+
+  String? getDuaNote(String duaId) {
+    return _appSettings.duaPreferences.duaNotes[duaId];
   }
 
   bool isDuaFavorite(Dua dua) {
