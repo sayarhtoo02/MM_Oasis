@@ -57,7 +57,7 @@ class DuaDetailAppBarActions extends StatelessWidget {
                         }
                       },
                     );
-                  }).toList(),
+                  }),
                   const Divider(),
                 ],
                 const Text('Or create a new collection:'),

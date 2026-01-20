@@ -52,28 +52,34 @@ class _DuaAudioPlayerManagerState extends State<DuaAudioPlayerManager> {
 
   void _initAudioPlayer() {
     _audioPlayer.onPlayerStateChanged.listen((state) {
-      setState(() {
-        _playerState = state;
-      });
+      if (mounted) {
+        setState(() {
+          _playerState = state;
+        });
+      }
     });
 
     _audioPlayer.onDurationChanged.listen((newDuration) {
-      setState(() {
-        _duration = newDuration;
-      });
+      if (mounted) {
+        setState(() {
+          _duration = newDuration;
+        });
+      }
     });
 
     _audioPlayer.onPositionChanged.listen((newPosition) {
-      setState(() {
-        _position = newPosition;
-      });
+      if (mounted) {
+        setState(() {
+          _position = newPosition;
+        });
+      }
     });
 
     _audioPlayer.onPlayerComplete.listen((event) {
       if (_isLooping) {
         _audioPlayer.seek(Duration.zero);
         _audioPlayer.resume();
-      } else {
+      } else if (mounted) {
         setState(() {
           _playerState = PlayerState.stopped;
           _position = Duration.zero;
@@ -83,7 +89,7 @@ class _DuaAudioPlayerManagerState extends State<DuaAudioPlayerManager> {
   }
 
   void _loadAudioForCurrentDua() async {
-    final String audioPath = 'assets/audio/dua_${widget.currentDua.manzilNumber}_${widget.currentDua.day.toLowerCase().replaceAll(' ', '')}.mp3';
+    final String audioPath = 'audio/dua_${widget.currentDua.manzilNumber}_${widget.currentDua.day.toLowerCase().replaceAll(' ', '')}.mp3';
 
     try {
       await _audioPlayer.stop(); // Stop any currently playing audio

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="0dp">
+
+    <!-- Header Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/widget_header_bg"
+        android:padding="12dp"
+        android:gravity="center_vertical">
+        
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@mipmap/launcher_icon"
+            android:layout_marginEnd="8dp" />
+        
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="مناجات مقبول"
+                android:textSize="13sp"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:fontFamily="@font/arabic_font" />
+            
+            <TextView
+                android:id="@+id/widget_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Monday"
+                android:textSize="10sp"
+                android:textColor="#E0FFFFFF"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+        
+        <TextView
+            android:id="@+id/widget_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Day 1"
+            android:textSize="11sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/progress_badge_white"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Main Content - Arabic Dua -->
+    <RelativeLayout
+        android:id="@+id/main_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp"
+        android:background="@drawable/widget_content_bg">
+        
+        <ImageView
+            android:id="@+id/widget_arabic_image"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter" />
+    </RelativeLayout>
+
+    <!-- Footer - Translation -->
+    <LinearLayout
+        android:id="@+id/footer_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/widget_footer_bg"
+        android:padding="12dp">
+        
+        <TextView
+            android:id="@+id/widget_translation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="In the name of Allah, the Most Gracious, the Most Merciful"
+            android:textSize="12sp"
+            android:textColor="@color/widget_text_secondary"
+            android:gravity="center"
+            android:maxLines="4"
+            android:ellipsize="end"
+            android:lineSpacingExtra="3dp"
+            android:fontFamily="@font/myanmar_font" />
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="📖 Tap to read more"
+            android:textSize="10sp"
+            android:textColor="@color/widget_accent"
+            android:textStyle="bold"
+            android:layout_marginTop="6dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/action_button" />
+    </LinearLayout>
+
+</LinearLayout>

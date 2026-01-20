@@ -1,107 +1,159 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../providers/settings_provider.dart';
-import '../models/language_settings.dart'; // Import LanguageSettings
-import '../screens/settings_screen_components/settings_card.dart';
+import '../models/language_settings.dart';
+import '../config/glass_theme.dart';
+import '../widgets/glass/glass_scaffold.dart';
+import '../widgets/glass/glass_card.dart';
+import '../utils/haptic_feedback_helper.dart';
 
 class LanguageSettingsScreen extends StatelessWidget {
   const LanguageSettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        final isDark = settingsProvider.isDarkMode;
+        final textColor = GlassTheme.text(isDark);
+        final accentColor = GlassTheme.accent(isDark);
+        final languageSettings = settingsProvider.appSettings.languageSettings;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Language Settings',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: colorScheme.onPrimary,
-          ),
-        ),
-        backgroundColor: colorScheme.primary,
-        iconTheme: IconThemeData(color: colorScheme.onPrimary),
-      ),
-      body: Selector<SettingsProvider, LanguageSettings>(
-        selector: (context, provider) => provider.appSettings.languageSettings,
-        builder: (context, languageSettings, child) {
-          final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [colorScheme.surface, colorScheme.surface],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: ListView(
-              padding: const EdgeInsets.all(20.0),
-              children: [
-                SettingsCard(
-                  title: 'Language Selection',
-                  icon: Icons.language,
+        return GlassScaffold(
+          title: 'Language',
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              GlassCard(
+                isDark: isDark,
+                borderRadius: 16,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Choose your preferred language:',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16 * settingsProvider.appSettings.displaySettings.translationFontSizeMultiplier,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      value: languageSettings.selectedLanguage,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: colorScheme.primary.withAlpha((0.5 * 255).round())),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: colorScheme.primary.withAlpha((0.5 * 255).round())),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest.withAlpha((0.7 * 255).round()),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                      ),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          settingsProvider.setSelectedLanguage(newValue);
-                        }
-                      },
-                      items: const <DropdownMenuItem<String>>[
-                        DropdownMenuItem<String>(
-                          value: 'en',
-                          child: Text('English'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'my',
-                          child: Text('Burmese'),
-                        ),
-                        DropdownMenuItem<String>(
-                          value: 'ur',
-                          child: Text('Urdu'),
+                    Row(
+                      children: [
+                        Icon(Icons.translate, color: accentColor, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Translation Language',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: accentColor,
+                            fontSize: 16,
+                          ),
                         ),
                       ],
-                      style: GoogleFonts.poppins(
-                        fontSize: 16 * settingsProvider.appSettings.displaySettings.translationFontSizeMultiplier,
-                        color: colorScheme.onSurface,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Choose your preferred language for dua translations',
+                      style: TextStyle(
+                        color: textColor.withValues(alpha: 0.7),
+                        fontSize: 14,
                       ),
-                      dropdownColor: colorScheme.surface,
-                      iconEnabledColor: colorScheme.primary,
+                    ),
+                    const SizedBox(height: 20),
+                    ..._buildLanguageOptions(
+                      context,
+                      languageSettings,
+                      settingsProvider,
+                      isDark,
+                      textColor,
+                      accentColor,
                     ),
                   ],
                 ),
-              ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildLanguageOptions(
+    BuildContext context,
+    LanguageSettings settings,
+    SettingsProvider provider,
+    bool isDark,
+    Color textColor,
+    Color accentColor,
+  ) {
+    final languages = [
+      {'code': 'en', 'name': 'English', 'flag': '🇺🇸'},
+      {'code': 'my', 'name': 'Burmese', 'flag': '🇲🇲'},
+      {'code': 'ur', 'name': 'Urdu', 'flag': '🇵🇰'},
+    ];
+
+    return languages
+        .map(
+          (lang) => _buildLanguageOption(
+            context,
+            code: lang['code']!,
+            name: lang['name']!,
+            flag: lang['flag']!,
+            isSelected: settings.selectedLanguage == lang['code'],
+            textColor: textColor,
+            accentColor: accentColor,
+            onTap: () {
+              HapticFeedbackHelper.selectionClick();
+              provider.setSelectedLanguage(lang['code']!);
+            },
+          ),
+        )
+        .toList();
+  }
+
+  Widget _buildLanguageOption(
+    BuildContext context, {
+    required String code,
+    required String name,
+    required String flag,
+    required bool isSelected,
+    required Color textColor,
+    required Color accentColor,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? accentColor
+                  : textColor.withValues(alpha: 0.2),
+              width: isSelected ? 2 : 1,
             ),
-          );
-        },
+            color: isSelected
+                ? accentColor.withValues(alpha: 0.1)
+                : Colors.transparent,
+          ),
+          child: Row(
+            children: [
+              Text(flag, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    color: isSelected ? accentColor : textColor,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Icon(Icons.check_circle, color: accentColor, size: 20),
+            ],
+          ),
+        ),
       ),
     );
   }

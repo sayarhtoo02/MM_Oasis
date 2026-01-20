@@ -11,7 +11,9 @@ class LanguageSelectionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    final AppSettings appSettings = Provider.of<SettingsProvider>(context).appSettings;
+    final AppSettings appSettings = Provider.of<SettingsProvider>(
+      context,
+    ).appSettings;
 
     return SettingsCard(
       title: 'Language Selection',
@@ -20,51 +22,56 @@ class LanguageSelectionSection extends StatelessWidget {
         Text(
           'Choose your preferred language:',
           style: GoogleFonts.poppins(
-            fontSize: 16 * appSettings.displaySettings.translationFontSizeMultiplier,
+            fontSize:
+                16 * appSettings.displaySettings.translationFontSizeMultiplier,
             color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          value: appSettings.languageSettings.selectedLanguage,
+          initialValue: appSettings.languageSettings.selectedLanguage,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: colorScheme.primary.withAlpha((0.5 * 255).round())),
+              borderSide: BorderSide(
+                color: colorScheme.primary.withAlpha((0.5 * 255).round()),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: colorScheme.primary.withAlpha((0.5 * 255).round())),
+              borderSide: BorderSide(
+                color: colorScheme.primary.withAlpha((0.5 * 255).round()),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: colorScheme.primary, width: 2),
             ),
             filled: true,
-            fillColor: colorScheme.surfaceContainerHighest.withAlpha((0.7 * 255).round()),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+            fillColor: colorScheme.surfaceContainerHighest.withAlpha(
+              (0.7 * 255).round(),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 15,
+              vertical: 10,
+            ),
           ),
           onChanged: (String? newValue) {
             if (newValue != null) {
-              Provider.of<SettingsProvider>(context, listen: false).setSelectedLanguage(newValue);
+              Provider.of<SettingsProvider>(
+                context,
+                listen: false,
+              ).setSelectedLanguage(newValue);
             }
           },
           items: const <DropdownMenuItem<String>>[
-            DropdownMenuItem<String>(
-              value: 'en',
-              child: Text('English'),
-            ),
-            DropdownMenuItem<String>(
-              value: 'my',
-              child: Text('Burmese'),
-            ),
-            DropdownMenuItem<String>(
-              value: 'ur',
-              child: Text('Urdu'),
-            ),
+            DropdownMenuItem<String>(value: 'en', child: Text('English')),
+            DropdownMenuItem<String>(value: 'my', child: Text('Burmese')),
+            DropdownMenuItem<String>(value: 'ur', child: Text('Urdu')),
           ],
           style: GoogleFonts.poppins(
-            fontSize: 16 * appSettings.displaySettings.translationFontSizeMultiplier,
+            fontSize:
+                16 * appSettings.displaySettings.translationFontSizeMultiplier,
             color: colorScheme.onSurface,
           ),
           dropdownColor: colorScheme.surface,

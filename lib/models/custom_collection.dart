@@ -1,4 +1,3 @@
-import 'package:munajat_e_maqbool_app/models/dua_model.dart';
 
 class CustomCollection {
   final String id;

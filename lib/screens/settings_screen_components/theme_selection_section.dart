@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../providers/settings_provider.dart';
-import '../../models/app_settings.dart';
-import '../../config/app_constants.dart'; // Import AppThemeMode
+import '../../config/app_constants.dart';
+
 import 'settings_card.dart';
 
 class ThemeSelectionSection extends StatelessWidget {
@@ -21,7 +19,6 @@ class ThemeSelectionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    final AppSettings appSettings = Provider.of<SettingsProvider>(context).appSettings;
 
     return SettingsCard(
       title: 'Theme Selection',
@@ -36,23 +33,32 @@ class ThemeSelectionSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<AppThemeMode>(
-          value: selectedThemeMode,
+          initialValue: selectedThemeMode,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
+              borderSide: BorderSide(
+                color: colorScheme.primary.withValues(alpha: 0.5),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
+              borderSide: BorderSide(
+                color: colorScheme.primary.withValues(alpha: 0.5),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: colorScheme.primary, width: 2),
             ),
             filled: true,
-            fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.7),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+            fillColor: colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.7,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 15,
+              vertical: 10,
+            ),
           ),
           onChanged: onThemeModeChanged,
           items: const <DropdownMenuItem<AppThemeMode>>[

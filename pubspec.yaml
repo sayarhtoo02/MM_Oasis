@@ -16,10 +16,10 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 2.0.0
 
 environment:
-  sdk: ^3.8.1
+  sdk: '>=3.10.3 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -37,6 +37,7 @@ dependencies:
   provider: ^6.0.0
   google_fonts: ^6.2.1
   shared_preferences: ^2.0.0 # Add this line for persistent storage
+  flutter_svg: ^2.0.10 # For SVG rendering
   flutter_xlider: ^3.5.0 # For dynamic text sizing slider
   audioplayers: ^6.5.0 # For audio recitation
   share_plus: ^11.0.0 # For sharing content
@@ -44,6 +45,35 @@ dependencies:
   intl: ^0.20.2 # For date formatting
   flutter_local_notifications: ^17.1.2 # For local notifications
   timezone: ^0.9.2 # For timezone support in notifications
+  geolocator: ^13.0.2 # For location-based prayer times (upgraded for flutter_qiblah)
+  geocoding: ^3.0.0 # For reverse geocoding (city names)
+  http: ^1.2.0 # For API calls
+  adhan: ^2.0.0 # For accurate prayer time calculations
+  home_widget: ^0.6.0 # For home screen widgets
+  path_provider: ^2.1.0 # For wallpaper creation
+  path: ^1.9.0 # For path operations
+  vibration: ^2.0.0 # For haptic feedback in tasbih
+  sqflite: ^2.3.0 # For SQLite database
+  sqflite_common_ffi: ^2.3.0 # For Windows/Linux/macOS database support
+  flutter_archive: ^6.0.3 # For extracting database files
+  scrollable_positioned_list: ^0.3.8 # For jumping to specific list items
+  html: ^0.15.4 # For parsing HTML content in tafseer
+  url_launcher: ^6.3.2 # For opening external links
+  hijri: ^3.0.0 # For Islamic calendar
+  flutter_widget_from_html: ^0.17.1
+  flutter_qiblah: ^3.1.0+1 # For Qibla direction calculation (includes compass)
+  supabase_flutter: ^2.12.0
+  ota_update: ^7.1.0
+  package_info_plus: ^9.0.0
+  google_maps_flutter: ^2.10.0 # For shop location picker
+  image_picker: ^1.1.2 # For shop image uploads
+  image_cropper: ^8.0.2 # For cropping banner images
+  crypto: ^3.0.7
+  fl_chart: ^1.1.1
+  permission_handler: ^12.0.1
+  timeago: ^3.7.1
+  flutter_background_service: ^5.1.0
+  device_info_plus: ^11.5.0
 
 dev_dependencies:
   flutter_test:
@@ -70,9 +100,30 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/munajat.json
+    - assets/99names.json
     - assets/fonts/
     - assets/images/ # Add this line to include the images directory
+    - assets/icons/ # Added for Islamic icons
     - assets/audio/ # Add this line to include the audio directory
+    - assets/dua_data/core/
+    - assets/dua_data/dua-dhikr/morning-dhikr/
+    - assets/dua_data/dua-dhikr/evening-dhikr/
+    - assets/dua_data/dua-dhikr/daily-dua/
+    - assets/dua_data/dua-dhikr/selected-dua/
+    - assets/dua_data/dua-dhikr/dhikr-after-salah/
+    - assets/quran_data/
+    - assets/quran_data/quran_scripts/
+    - assets/quran_data/mushaf_layout_data/
+    - assets/quran_data/quran-simple.json
+    - assets/quran_data/mya-basein.txt
+    - assets/quran_data/mya-ghazimohammadha.txt
+    - assets/quran_data/mya-hashimtinmyint.txt
+    - assets/quran_data/tasfeer-ibn-kasir/my-ibn-kasir/
+    - assets/quran_data/tasfeer-ibn-kasir/en-ibn-kasir/
+    - assets/hadits_data/
+    - assets/sunnah collection/
+    - assets/splash_screen/
+  
   fonts:
     - family: Arabic
       fonts:
@@ -80,6 +131,12 @@ flutter:
     - family: Myanmar
       fonts:
         - asset: assets/fonts/myanmar.ttf
+    - family: Indopak
+      fonts:
+        - asset: assets/fonts/indopak nastaleeq.ttf
+    - family: SurahHeader
+      fonts:
+        - asset: assets/fonts/QCF_SurahHeader_COLOR-Regular.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -104,11 +161,10 @@ flutter:
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
   #
-# For details regarding fonts from package dependencies,
-# see https://flutter.dev/to/font-from-package
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/app_icon.png"
+  image_path: "assets/images/MMOASIS_ICON.png"
   min_sdk_android: 21 # set to min_sdk_version of AndroidManifest.xml
+  remove_alpha_ios: true

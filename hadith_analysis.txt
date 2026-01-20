@@ -1,0 +1,6 @@
+Analyzing hadith_screen.dart...                                 
+
+   info - Unnecessary use of multiple underscores - lib\screens\hadith_screen.dart:410:34 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\hadith_screen.dart:410:38 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\hadith_screen.dart:412:52 - unnecessary_underscores
+

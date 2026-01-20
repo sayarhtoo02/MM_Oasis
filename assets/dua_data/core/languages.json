@@ -1,0 +1,14 @@
+{
+  "id": {
+    "label": "Bahasa Indonesia",
+    "code": "id"
+  },
+  "en": {
+    "label": "English",
+    "code": "en"
+  },
+  "mm": {
+    "label": "Myanmar",
+    "code": "mm"
+  }
+}

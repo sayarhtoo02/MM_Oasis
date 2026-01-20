@@ -1,0 +1,69 @@
+name: Islamic App Backup System
+
+on:
+  schedule:
+    # နေ့စဉ် မနက် ၃ နာရီ (UTC) / မြန်မာစံတော်ချိန် ၉:၃၀ ခန့်
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup_mission:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # ၁. Tools များ သွင်းခြင်း
+      - name: Install Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          curl https://rclone.org/install.sh | sudo bash
+
+      # ၂. Configuration (OneDrive + Supabase S3)
+      - name: Setup Configuration
+        run: |
+          mkdir -p ~/.config/rclone
+          
+          # OneDrive Config (GitHub Secret မှ)
+          echo "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
+          
+          # Supabase Storage Config (S3) ထပ်ပေါင်းခြင်း
+          echo "" >> ~/.config/rclone/rclone.conf
+          echo "[supabase_storage]" >> ~/.config/rclone/rclone.conf
+          echo "type = s3" >> ~/.config/rclone/rclone.conf
+          echo "provider = Other" >> ~/.config/rclone/rclone.conf
+          echo "env_auth = false" >> ~/.config/rclone/rclone.conf
+          echo "access_key_id = ${{ secrets.SUPABASE_ACCESS_KEY_ID }}" >> ~/.config/rclone/rclone.conf
+          echo "secret_access_key = ${{ secrets.SUPABASE_SECRET_ACCESS_KEY }}" >> ~/.config/rclone/rclone.conf
+          echo "region = ${{ secrets.SUPABASE_STORAGE_REGION }}" >> ~/.config/rclone/rclone.conf
+          echo "endpoint = https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/storage/v1/s3" >> ~/.config/rclone/rclone.conf
+
+      # ၃. Database Backup (ဖိုင်တစ်ခုတည်း၊ Zip မချုပ်ပါ)
+      - name: Backup Database
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          echo "Backing up Database (Raw SQL)..."
+          # gzip ကို ဖြုတ်လိုက်ပါပြီ၊ .sql အတိုင်း ထွက်ပါမယ်
+          pg_dump "$DB_URL" > db_backup.sql
+          
+          echo "Uploading Database to OneDrive..."
+          # နာမည်မှာ Space ပါလို့ မျက်တောင် "" ခံထားပါတယ်
+          rclone copy db_backup.sql "onedrive:MM OASIS APP/Database/"
+
+      # ၄. Images Backup (Bucket ၄ ခုလုံးအတွက်)
+      - name: Sync All Buckets
+        run: |
+          echo "Syncing 'masjid-images'..."
+          rclone copy supabase_storage:masjid-images "onedrive:MM OASIS APP/Storage/masjid-images/" --progress
+
+          echo "Syncing 'shop-images'..."
+          rclone copy supabase_storage:shop-images "onedrive:MM OASIS APP/Storage/shop-images/" --progress
+
+          echo "Syncing 'blog-images'..."
+          rclone copy supabase_storage:blog-images "onedrive:MM OASIS APP/Storage/blog-images/" --progress
+
+          echo "Syncing 'images'..."
+          rclone copy supabase_storage:images "onedrive:MM OASIS APP/Storage/images/" --progress

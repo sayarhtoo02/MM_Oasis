@@ -3,63 +3,67 @@ import 'package:provider/provider.dart';
 import 'package:munajat_e_maqbool_app/models/dua_model.dart';
 import 'package:munajat_e_maqbool_app/providers/dua_provider.dart';
 import 'package:munajat_e_maqbool_app/providers/settings_provider.dart';
+import 'package:munajat_e_maqbool_app/screens/dua_detail_screen.dart';
+import '../config/glass_theme.dart';
+import '../widgets/glass/glass_scaffold.dart';
+import '../widgets/glass/glass_card.dart';
 
 class DuaListScreen extends StatelessWidget {
-  const DuaListScreen({super.key});
+  final int? manzilNumber;
+
+  const DuaListScreen({super.key, this.manzilNumber});
 
   @override
   Widget build(BuildContext context) {
-    final int manzilNumber = ModalRoute.of(context)!.settings.arguments as int;
+    final int effectiveManzilNumber =
+        manzilNumber ?? (ModalRoute.of(context)!.settings.arguments as int);
     final duaProvider = Provider.of<DuaProvider>(context);
+    final settingsProvider = Provider.of<SettingsProvider>(context);
+    final isDark = settingsProvider.isDarkMode;
+    final textColor = GlassTheme.text(isDark);
 
     final List<Dua> manzilDuas = duaProvider.allDuas
-        .where((dua) => dua.manzilNumber == manzilNumber)
+        .where((dua) => dua.manzilNumber == effectiveManzilNumber)
         .toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Manzil $manzilNumber Duas'),
-      ),
+    return GlassScaffold(
+      title: 'Manzil $effectiveManzilNumber Duas',
       body: ListView.builder(
+        padding: const EdgeInsets.all(16),
         itemCount: manzilDuas.length,
         itemBuilder: (context, index) {
           final Dua dua = manzilDuas[index];
-          return GestureDetector(
-            onTap: () {
-              Navigator.pushNamed(
-                context,
-                '/dua_detail', // This route will be defined later
-                arguments: {
-                  'selectedDua': dua,
-                  'manzilDuas': manzilDuas,
-                },
-              );
-            },
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor, // Use card color for consistency
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1), // Subtle shadow from primary color
-                    spreadRadius: 2,
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: GlassCard(
+              isDark: isDark,
+              borderRadius: 20,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DuaDetailScreen(
+                      initialDua: dua,
+                      manzilDuas: manzilDuas,
+                    ),
                   ),
-                ],
-                borderRadius: BorderRadius.circular(16.0), // Slightly larger rounded corners
-              ),
+                );
+              },
               child: Text(
                 dua.arabicText,
-                textAlign: TextAlign.justify, // Keep right alignment
-                textDirection: TextDirection.rtl, // Ensure right-to-left text direction
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
                 style: TextStyle(
-                  fontFamily: 'Arabic', // Apply the Arabic font
-                  fontSize: 38 * Provider.of<SettingsProvider>(context).appSettings.displaySettings.arabicFontSizeMultiplier, // Slightly larger font for Arabic
+                  fontFamily: 'Indopak',
                   letterSpacing: 0,
-                  height: 2.0, // Adjust line spacing for better calligraphy appearance
-                  color: Theme.of(context).colorScheme.onSurface, // Use onSurface for Arabic text
+                  fontSize:
+                      38 *
+                      settingsProvider
+                          .appSettings
+                          .displaySettings
+                          .arabicFontSizeMultiplier,
+                  height: 2.2,
+                  color: textColor,
                 ),
               ),
             ),

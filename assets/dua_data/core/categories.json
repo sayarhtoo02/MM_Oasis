@@ -1,0 +1,68 @@
+{
+  "id": [
+    {
+      "name": "Dzikir Pagi",
+      "slug": "morning-dhikr"
+    },
+    {
+      "name": "Dzikir Petang",
+      "slug": "evening-dhikr"
+    },
+    {
+      "name": "Doa Harian",
+      "slug": "daily-dua"
+    },
+    {
+      "name": "Doa Pilihan",
+      "slug": "selected-dua"
+    },
+    {
+      "name": "Dzikir Setelah Shalat",
+      "slug": "dhikr-after-salah"
+    }
+  ],
+  "en": [
+    {
+      "name": "Morning Dhikr",
+      "slug": "morning-dhikr"
+    },
+    {
+      "name": "Evening Dhikr",
+      "slug": "evening-dhikr"
+    },
+    {
+      "name": "Daily Dua",
+      "slug": "daily-dua"
+    },
+    {
+      "name": "Selected Dua",
+      "slug": "selected-dua"
+    },
+    {
+      "name": "Dhikr After Salah",
+      "slug": "dhikr-after-salah"
+    }
+  ],
+  "mm": [
+    {
+      "name": "နံနက်ခင်း ဇိကိရ်များ",
+      "slug": "morning-dhikr"
+    },
+    {
+      "name": "ညနေခင်း ဇိကိရ်များ",
+      "slug": "evening-dhikr"
+    },
+    {
+      "name": "နေ့စဉ်ရွတ်ဖတ်ရသောဒုအာ",
+      "slug": "daily-dua"
+    },
+    {
+      "name": "အခြားဒုအာများ",
+      "slug": "selected-dua"
+    },
+    {
+      "name": "ဆွလာသ်ပြီးနောက်ရွတ်ဆိုရသော ဒုအာများ",
+      "slug": "dhikr-after-salah"
+    }
+  ]
+}

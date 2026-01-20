@@ -41,7 +41,7 @@ class AudioPlayerControls extends StatelessWidget {
         color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             spreadRadius: 2,
             blurRadius: 8,
             offset: const Offset(0, 4),
@@ -52,18 +52,27 @@ class AudioPlayerControls extends StatelessWidget {
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround, // Distribute controls
+            mainAxisAlignment:
+                MainAxisAlignment.spaceAround, // Distribute controls
             children: [
               IconButton(
                 icon: Icon(
-                  isLooping ? Icons.repeat_one_on : Icons.repeat_one, // Loop icon
-                  color: isLooping ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  isLooping
+                      ? Icons.repeat_one_on
+                      : Icons.repeat_one, // Loop icon
+                  color: isLooping
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 onPressed: onToggleLoop,
               ),
               IconButton(
                 icon: Icon(
-                  playerState == PlayerState.playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                  playerState == PlayerState.playing
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
                   size: 48,
                   color: Theme.of(context).colorScheme.primary,
                 ),
@@ -71,7 +80,10 @@ class AudioPlayerControls extends StatelessWidget {
               ),
               DropdownButton<double>(
                 value: playbackSpeed,
-                icon: Icon(Icons.speed, color: Theme.of(context).colorScheme.onSurface),
+                icon: Icon(
+                  Icons.speed,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 underline: const SizedBox.shrink(),
                 onChanged: (double? newValue) {
                   if (newValue != null) {
@@ -80,11 +92,17 @@ class AudioPlayerControls extends StatelessWidget {
                 },
                 items: const <double>[0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
                     .map<DropdownMenuItem<double>>((double value) {
-                  return DropdownMenuItem<double>(
-                    value: value,
-                    child: Text('${value}x', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                  );
-                }).toList(),
+                      return DropdownMenuItem<double>(
+                        value: value,
+                        child: Text(
+                          '${value}x',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      );
+                    })
+                    .toList(),
               ),
             ],
           ),
@@ -94,7 +112,9 @@ class AudioPlayerControls extends StatelessWidget {
             value: position.inSeconds.toDouble(),
             onChanged: onSliderChanged,
             activeColor: Theme.of(context).colorScheme.primary,
-            inactiveColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            inactiveColor: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.3),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -103,11 +123,15 @@ class AudioPlayerControls extends StatelessWidget {
               children: [
                 Text(
                   _formatDuration(position),
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
                 Text(
                   _formatDuration(duration),
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ],
             ),

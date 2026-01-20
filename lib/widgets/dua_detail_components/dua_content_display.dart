@@ -24,49 +24,83 @@ class DuaContentDisplay extends StatelessWidget {
         color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: Theme.of(
+              context,
+            ).shadowColor.withValues(alpha: 0.05), // Softer shadow
+            spreadRadius: 0,
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: BorderRadius.circular(24.0), // Rounded corners
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             dua.arabicText,
-            textAlign: TextAlign.justify,
+            textAlign: TextAlign.center, // Center align for better aesthetics
             textDirection: TextDirection.rtl,
             style: TextStyle(
-              fontFamily: 'Arabic',
-              fontSize: 38 * settingsProvider.appSettings.displaySettings.arabicFontSizeMultiplier,
-              height: 2.0,
+              fontFamily: 'Indopak',
               letterSpacing: 0,
+              fontSize:
+                  38 *
+                  settingsProvider
+                      .appSettings
+                      .displaySettings
+                      .arabicFontSizeMultiplier,
+              height: 2.3, // Increased line height
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 25),
+          const SizedBox(height: 20),
+          Divider(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+            thickness: 1,
+            indent: 40,
+            endIndent: 40,
+          ),
+          const SizedBox(height: 20),
           Text(
             dua.translations.getTranslationText(selectedLanguage),
             style: TextStyle(
-              fontSize: 18 * settingsProvider.appSettings.displaySettings.translationFontSizeMultiplier,
-              fontFamily: selectedLanguage == 'my' ? 'Myanmar' : 'Roboto',
-              color: Theme.of(context).colorScheme.onSurface,
+              fontSize:
+                  18 *
+                  settingsProvider
+                      .appSettings
+                      .displaySettings
+                      .translationFontSizeMultiplier,
+              fontFamily: selectedLanguage == 'mm' ? 'Myanmar' : 'Roboto',
+              height: 1.6, // Improved readability
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.85),
             ),
-            textAlign: TextAlign.left,
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 25),
-          Text(
-            'Source: ${dua.source}',
-            style: TextStyle(
-              fontSize: 16 * settingsProvider.appSettings.displaySettings.translationFontSizeMultiplier,
-              fontStyle: FontStyle.italic,
-              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.7 * 255).round()),
+          if (dua.source != null && dua.source!.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text(
+              'Source: ${dua.source}',
+              style: TextStyle(
+                fontSize:
+                    14 *
+                    settingsProvider
+                        .appSettings
+                        .displaySettings
+                        .translationFontSizeMultiplier,
+                fontStyle: FontStyle.italic,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.left,
-          ),
+          ],
         ],
       ),
     );

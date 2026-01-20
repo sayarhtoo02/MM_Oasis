@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_xlider/flutter_xlider.dart';
-import '../../providers/settings_provider.dart';
-import '../../models/app_settings.dart';
+
 import 'settings_card.dart';
 
 class TranslationFontSizeSection extends StatelessWidget {
@@ -19,7 +17,6 @@ class TranslationFontSizeSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    final AppSettings appSettings = Provider.of<SettingsProvider>(context).appSettings;
 
     return SettingsCard(
       title: 'Translation Font Size Adjustment',

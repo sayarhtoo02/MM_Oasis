@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120"
+    android:alpha="0.15">
+    
+    <!-- Central 8-pointed star -->
+    <path
+        android:pathData="M60,20 L65,40 L80,35 L70,50 L85,60 L70,70 L80,85 L65,80 L60,100 L55,80 L40,85 L50,70 L35,60 L50,50 L40,35 L55,40 Z"
+        android:fillColor="#2E7D32"
+        android:fillAlpha="0.3" />
+    
+    <!-- Outer decorative circles -->
+    <path
+        android:pathData="M60,60 m-45,0 a45,45 0,1,1 90,0 a45,45 0,1,1 -90,0"
+        android:strokeColor="#2E7D32"
+        android:strokeWidth="0.5"
+        android:fillColor="#00000000" />
+    
+    <path
+        android:pathData="M60,60 m-35,0 a35,35 0,1,1 70,0 a35,35 0,1,1 -70,0"
+        android:strokeColor="#FFB300"
+        android:strokeWidth="0.5"
+        android:fillColor="#00000000" />
+    
+    <!-- Corner ornaments -->
+    <path
+        android:pathData="M20,20 L25,30 L30,20 L25,25 Z"
+        android:fillColor="#FFB300"
+        android:fillAlpha="0.4" />
+    
+    <path
+        android:pathData="M100,20 L95,30 L90,20 L95,25 Z"
+        android:fillColor="#FFB300"
+        android:fillAlpha="0.4" />
+    
+    <path
+        android:pathData="M20,100 L25,90 L30,100 L25,95 Z"
+        android:fillColor="#FFB300"
+        android:fillAlpha="0.4" />
+    
+    <path
+        android:pathData="M100,100 L95,90 L90,100 L95,95 Z"
+        android:fillColor="#FFB300"
+        android:fillAlpha="0.4" />
+</vector>
