@@ -13,14 +13,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # --- ဒီနေရာမှာ IPv6 ပိတ်တဲ့ အပိုင်း အသစ်ထည့်ထားပါတယ် ---
-      - name: Disable IPv6 (Fix Network Error)
-        run: |
-          sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-          sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
-          sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
-      # ----------------------------------------------------
-
       - name: Install Tools
         run: |
           sudo apt-get update
@@ -41,11 +33,11 @@ jobs:
           echo "region = ${{ secrets.SUPABASE_STORAGE_REGION }}" >> ~/.config/rclone/rclone.conf
           echo "endpoint = https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/storage/v1/s3" >> ~/.config/rclone/rclone.conf
 
-      - name: Backup Database
+      - name: Backup Database (Via Session Pooler)
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          echo "Backing up Database (Raw SQL)..."
+          echo "Backing up Database..."
           pg_dump "$DB_URL" > db_backup.sql
           
           echo "Uploading Database to OneDrive..."
@@ -53,14 +45,8 @@ jobs:
 
       - name: Sync All Buckets
         run: |
-          echo "Syncing 'masjid-images'..."
+          echo "Syncing all buckets..."
           rclone copy supabase_storage:masjid-images "onedrive:MM OASIS APP/Storage/masjid-images/" --progress
-
-          echo "Syncing 'shop-images'..."
           rclone copy supabase_storage:shop-images "onedrive:MM OASIS APP/Storage/shop-images/" --progress
-
-          echo "Syncing 'blog-images'..."
           rclone copy supabase_storage:blog-images "onedrive:MM OASIS APP/Storage/blog-images/" --progress
-
-          echo "Syncing 'images'..."
           rclone copy supabase_storage:images "onedrive:MM OASIS APP/Storage/images/" --progress
