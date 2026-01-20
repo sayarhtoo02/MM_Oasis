@@ -1,4 +1,4 @@
-nname: Islamic App Backup System
+name: Islamic App Backup System
 
 on:
   schedule:
