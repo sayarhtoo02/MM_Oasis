@@ -13,10 +13,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Install Tools
+      - name: Install Tools (Postgres 17)
         run: |
+          # 1. Postgres 17 Repository ကို ထည့်သွင်းခြင်း
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          
+          # 2. Update လုပ်ပြီး Version 17 ကို သွင်းခြင်း
           sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y postgresql-client-17 dnsutils
+          
+          # 3. Rclone သွင်းခြင်း
           curl https://rclone.org/install.sh | sudo bash
 
       - name: Setup Configuration
@@ -33,12 +40,13 @@ jobs:
           echo "region = ${{ secrets.SUPABASE_STORAGE_REGION }}" >> ~/.config/rclone/rclone.conf
           echo "endpoint = https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/storage/v1/s3" >> ~/.config/rclone/rclone.conf
 
-      - name: Backup Database (Via Session Pooler)
+      - name: Backup Database (Version 17)
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           echo "Backing up Database..."
-          pg_dump "$DB_URL" > db_backup.sql
+          # Version 17 နဲ့ Backup ယူမယ်
+          /usr/lib/postgresql/17/bin/pg_dump "$DB_URL" > db_backup.sql
           
           echo "Uploading Database to OneDrive..."
           rclone copy db_backup.sql "onedrive:MM OASIS APP/Database/"
