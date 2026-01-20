@@ -1,4 +1,4 @@
-name: Islamic App Backup System
+nname: Islamic App Backup System
 
 on:
   schedule:
@@ -15,21 +15,19 @@ jobs:
 
       - name: Install Tools (Postgres 17)
         run: |
-          # 1. Postgres 17 Repository ကို ထည့်သွင်းခြင်း
           sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-          
-          # 2. Update လုပ်ပြီး Version 17 ကို သွင်းခြင်း
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17 dnsutils
-          
-          # 3. Rclone သွင်းခြင်း
           curl https://rclone.org/install.sh | sudo bash
 
       - name: Setup Configuration
+        env:
+          # Secret ကို Variable အနေနဲ့ လှမ်းခေါ်လိုက်လို့ Quote ပြဿနာရှင်းသွားပါပြီ
+          RCLONE_CONF: ${{ secrets.RCLONE_CONFIG }}
         run: |
           mkdir -p ~/.config/rclone
-          echo "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
+          echo "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
           echo "" >> ~/.config/rclone/rclone.conf
           echo "[supabase_storage]" >> ~/.config/rclone/rclone.conf
           echo "type = s3" >> ~/.config/rclone/rclone.conf
@@ -45,7 +43,6 @@ jobs:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           echo "Backing up Database..."
-          # Version 17 နဲ့ Backup ယူမယ်
           /usr/lib/postgresql/17/bin/pg_dump "$DB_URL" > db_backup.sql
           
           echo "Uploading Database to OneDrive..."
