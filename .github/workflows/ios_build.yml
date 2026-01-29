@@ -17,7 +17,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.3' # Matching the project pubspec environment
+          flutter-version: 'any' # Ensure we get a recent version supporting Dart >=3.10.3
           channel: 'stable'
           cache: true
 
