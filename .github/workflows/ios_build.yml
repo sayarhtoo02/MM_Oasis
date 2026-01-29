@@ -13,28 +13,47 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'any' # Ensure we get a recent version supporting Dart >=3.10.3
+          flutter-version: 'any'
           channel: 'stable'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build iOS (No Codesign)
+      # Build for physical device (unsigned)
+      - name: Build iOS (Device - No Codesign)
         run: flutter build ios --no-codesign --release
 
-      - name: Compress Build Artifact
+      - name: Compress Device Build
         run: |
           cd build/ios/iphoneos
           zip -r Runner.app.zip Runner.app
 
-      - name: Upload iOS Build
+      - name: Upload Device Build
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build-unsigned
+          name: ios-build-device-unsigned
           path: build/ios/iphoneos/Runner.app.zip
+          retention-days: 7
+
+      # Build for simulator (for Appetize.io testing)
+      - name: Build iOS (Simulator)
+        run: flutter build ios --simulator --debug
+
+      - name: Compress Simulator Build
+        run: |
+          cd build/ios/iphonesimulator
+          zip -r Runner-Simulator.app.zip Runner.app
+
+      - name: Upload Simulator Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-simulator
+          path: build/ios/iphonesimulator/Runner-Simulator.app.zip
           retention-days: 7
