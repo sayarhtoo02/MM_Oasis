@@ -65,7 +65,15 @@ void onStart(ServiceInstance service) async {
   const androidSettings = AndroidInitializationSettings(
     '@mipmap/launcher_icon',
   );
-  const initSettings = InitializationSettings(android: androidSettings);
+  const iosSettings = DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+  const initSettings = InitializationSettings(
+    android: androidSettings,
+    iOS: iosSettings,
+  );
   await notificationsPlugin.initialize(initSettings);
 
   if (service is AndroidServiceInstance) {
