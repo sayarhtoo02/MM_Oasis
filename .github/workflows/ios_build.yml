@@ -75,6 +75,31 @@ jobs:
       - name: Build iOS (Simulator)
         run: flutter build ios --simulator --debug
 
+      - name: Verify database in Simulator build
+        run: |
+          echo "=== Checking database inside Simulator .app bundle ==="
+          # Find the database in the app bundle
+          find build/ios/iphonesimulator/Runner.app -name "oasismm.db" -o -name "*.db" | head -20
+          
+          # Check Flutter asset bundle
+          ASSET_PATH="build/ios/iphonesimulator/Runner.app/Frameworks/App.framework/flutter_assets/assets/oasismm.db"
+          if [ -f "$ASSET_PATH" ]; then
+            echo "Database found at: $ASSET_PATH"
+            ls -la "$ASSET_PATH"
+            FILE_SIZE=$(stat -f%z "$ASSET_PATH" 2>/dev/null || stat --format=%s "$ASSET_PATH")
+            echo "Database size in bundle: $FILE_SIZE bytes"
+            
+            if [ "$FILE_SIZE" -lt 1000000 ]; then
+              echo "WARNING: Database in bundle is too small!"
+            else
+              echo "=== Database verified in Simulator bundle! ==="
+            fi
+          else
+            echo "WARNING: Database not found at expected path"
+            echo "Searching entire app bundle..."
+            find build/ios/iphonesimulator/Runner.app -type f -name "*.db" -exec ls -la {} \;
+          fi
+
       - name: Compress Simulator Build
         run: |
           cd build/ios/iphonesimulator
