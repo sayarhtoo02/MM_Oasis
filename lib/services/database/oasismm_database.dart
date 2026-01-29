@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -18,31 +19,69 @@ class OasisMMDatabase {
 
   /// Initialize database - copy from assets if not exists
   static Future<Database> _initDatabase() async {
+    debugPrint('OasisMMDatabase: Starting initialization...');
+
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _dbName);
+    debugPrint('OasisMMDatabase: Target path: $path');
 
     // Check if database already exists
     final exists = await databaseExists(path);
+    debugPrint('OasisMMDatabase: Database exists at path: $exists');
 
     if (!exists) {
       // Copy from assets
+      debugPrint('OasisMMDatabase: Copying database from assets...');
       try {
-        await Directory(dirname(path)).create(recursive: true);
+        // Ensure directory exists
+        final dir = Directory(dirname(path));
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+          debugPrint('OasisMMDatabase: Created directory: ${dir.path}');
+        }
 
-        // Copy database from assets
+        // Load database from assets
+        debugPrint('OasisMMDatabase: Loading from assets/$_dbName...');
         final ByteData data = await rootBundle.load('assets/$_dbName');
+        debugPrint(
+          'OasisMMDatabase: Loaded ${data.lengthInBytes} bytes from assets',
+        );
+
         final List<int> bytes = data.buffer.asUint8List(
           data.offsetInBytes,
           data.lengthInBytes,
         );
+
+        // Write to file
+        debugPrint('OasisMMDatabase: Writing to $path...');
         await File(path).writeAsBytes(bytes, flush: true);
-      } catch (e) {
+
+        // Verify the file was written
+        final writtenFile = File(path);
+        if (await writtenFile.exists()) {
+          final size = await writtenFile.length();
+          debugPrint('OasisMMDatabase: Successfully wrote $size bytes');
+        } else {
+          throw Exception('Failed to write database file');
+        }
+      } catch (e, stackTrace) {
+        debugPrint('OasisMMDatabase: Error copying database: $e');
+        debugPrint('OasisMMDatabase: Stack trace: $stackTrace');
         throw Exception('Failed to copy database from assets: $e');
       }
     }
 
-    // Open database
-    return openDatabase(path, readOnly: true);
+    // Open database with explicit settings for iOS
+    debugPrint('OasisMMDatabase: Opening database...');
+    try {
+      final db = await openDatabase(path, readOnly: true, singleInstance: true);
+      debugPrint('OasisMMDatabase: Database opened successfully');
+      return db;
+    } catch (e, stackTrace) {
+      debugPrint('OasisMMDatabase: Error opening database: $e');
+      debugPrint('OasisMMDatabase: Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   /// Close database connection
