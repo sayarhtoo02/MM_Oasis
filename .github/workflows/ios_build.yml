@@ -19,11 +19,31 @@ jobs:
       - name: Pull LFS files
         run: git lfs pull
 
-      - name: Verify assets
+      - name: Verify LFS database
         run: |
-          echo "Checking database file size..."
+          echo "=== Checking database file ==="
           ls -la assets/oasismm.db
+          
+          # Check file size (should be ~180MB, not a few hundred bytes)
+          FILE_SIZE=$(stat -f%z assets/oasismm.db 2>/dev/null || stat --format=%s assets/oasismm.db)
+          echo "File size: $FILE_SIZE bytes"
+          
+          # If file is less than 1MB, it's probably just the LFS pointer
+          if [ "$FILE_SIZE" -lt 1000000 ]; then
+            echo "ERROR: Database file is too small! LFS file was not pulled properly."
+            echo "File contents:"
+            head -n 5 assets/oasismm.db
+            exit 1
+          fi
+          
+          # Verify it's actually a SQLite file
           file assets/oasismm.db
+          if ! file assets/oasismm.db | grep -q "SQLite"; then
+            echo "ERROR: File is not a valid SQLite database!"
+            exit 1
+          fi
+          
+          echo "=== Database verified successfully! ==="
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
