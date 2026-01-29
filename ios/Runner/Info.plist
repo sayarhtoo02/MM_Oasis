@@ -45,5 +45,60 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- ===== LOCATION PERMISSIONS ===== -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs your location to calculate accurate prayer times and Qibla direction for your area.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs your location to calculate prayer times and send timely prayer reminders even when the app is in the background.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs your location to provide accurate prayer time notifications when the app is in the background.</string>
+	
+	<!-- ===== CAMERA & PHOTO LIBRARY PERMISSIONS ===== -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to take photos for your shop profile or profile picture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs photo library access to select images for your shop profile or profile picture.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs permission to save images to your photo library.</string>
+	
+	<!-- ===== MICROPHONE (for audio features) ===== -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app may need microphone access for audio recording features.</string>
+	
+	<!-- ===== MOTION & COMPASS (for Qibla direction) ===== -->
+	<key>NSMotionUsageDescription</key>
+	<string>This app uses motion sensors to determine the Qibla direction accurately.</string>
+	
+	<!-- ===== BLUETOOTH (if needed for any accessories) ===== -->
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>This app may use Bluetooth to connect to nearby devices.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app may use Bluetooth to connect to nearby devices.</string>
+	
+	<!-- ===== BACKGROUND MODES ===== -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+		<string>audio</string>
+		<string>location</string>
+	</array>
+	
+	<!-- ===== GOOGLE MAPS API KEY ===== -->
+	<key>GMSApiKey</key>
+	<string>AIzaSyCNbEZVTEyJvKCjqSgha6REHRfc2h3e-pY</string>
+	
+	<!-- ===== APP TRANSPORT SECURITY (Allow HTTP if needed) ===== -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	
+	<!-- ===== FACE ID (if using biometric auth) ===== -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to securely access the app.</string>
+	
 </dict>
 </plist>

@@ -49,11 +49,12 @@ jobs:
       - name: Compress Simulator Build
         run: |
           cd build/ios/iphonesimulator
-          zip -r Runner-Simulator.app.zip Runner.app
+          # Appetize requires .app at root of zip, not nested
+          zip -r ../Runner-Simulator.zip Runner.app
 
       - name: Upload Simulator Build
         uses: actions/upload-artifact@v4
         with:
           name: ios-build-simulator
-          path: build/ios/iphonesimulator/Runner-Simulator.app.zip
+          path: build/ios/Runner-Simulator.zip
           retention-days: 7
