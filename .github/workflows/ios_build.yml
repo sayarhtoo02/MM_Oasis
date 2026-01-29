@@ -16,6 +16,15 @@ jobs:
         with:
           lfs: true
 
+      - name: Pull LFS files
+        run: git lfs pull
+
+      - name: Verify assets
+        run: |
+          echo "Checking database file size..."
+          ls -la assets/oasismm.db
+          file assets/oasismm.db
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
