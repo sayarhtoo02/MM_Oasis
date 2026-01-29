@@ -52,8 +52,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install dependencies
-        run: flutter pub get
+      - name: Clean and get dependencies
+        run: |
+          flutter clean
+          flutter pub get
 
       # Build for physical device (unsigned)
       - name: Build iOS (Device - No Codesign)

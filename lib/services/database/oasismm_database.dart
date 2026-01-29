@@ -61,6 +61,16 @@ class OasisMMDatabase {
         if (await writtenFile.exists()) {
           final size = await writtenFile.length();
           debugPrint('OasisMMDatabase: Successfully wrote $size bytes');
+
+          // IMPORTANT: Convert from WAL mode to DELETE mode for iOS compatibility
+          // WAL mode requires write access to -wal and -shm files even for read-only
+          debugPrint(
+            'OasisMMDatabase: Converting journal mode from WAL to DELETE...',
+          );
+          final tempDb = await openDatabase(path);
+          await tempDb.execute('PRAGMA journal_mode=DELETE');
+          await tempDb.close();
+          debugPrint('OasisMMDatabase: Journal mode converted successfully');
         } else {
           throw Exception('Failed to write database file');
         }
