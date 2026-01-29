@@ -4,11 +4,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 
+import 'package:munajat_e_maqbool_app/services/r2_storage_service.dart';
+
 class ShopImageService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final ImagePicker _picker = ImagePicker();
-
-  static const String _bucketName = 'shop-images';
+  final R2StorageService _r2Storage = R2StorageService();
 
   /// Create the storage bucket if it doesn't exist
   /// Note: This should be done via Supabase dashboard or migration
@@ -49,7 +50,7 @@ class ShopImageService {
     return null;
   }
 
-  /// Upload image to Supabase Storage
+  /// Upload image to R2 Storage
   Future<String?> uploadImage({
     required File file,
     required String shopId,
@@ -59,20 +60,15 @@ class ShopImageService {
       final ext = path.extension(file.path);
       final fileName =
           '${shopId}_${imageType}_${DateTime.now().millisecondsSinceEpoch}$ext';
-      final storagePath = '$shopId/$fileName';
+      final storagePath = 'shop-images/$shopId/$fileName';
 
-      await _supabase.storage
-          .from(_bucketName)
-          .upload(
-            storagePath,
-            file,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-          );
+      // Upload to R2
+      final publicUrl = await _r2Storage.uploadFile(
+        file: file,
+        path: storagePath,
+        contentType: 'image/${ext.replaceAll('.', '')}',
+      );
 
-      // Get public URL
-      final publicUrl = _supabase.storage
-          .from(_bucketName)
-          .getPublicUrl(storagePath);
       return publicUrl;
     } catch (e) {
       debugPrint('Upload error: $e');

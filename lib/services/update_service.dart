@@ -5,6 +5,9 @@ import 'package:ota_update/ota_update.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:io';
+import 'package:munajat_e_maqbool_app/widgets/glass/glass_update_dialog.dart';
+import 'package:munajat_e_maqbool_app/config/glass_theme.dart';
+import 'package:munajat_e_maqbool_app/widgets/glass/glass_card.dart';
 
 class UpdateService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -107,7 +110,7 @@ class UpdateService {
       }
     } catch (e) {
       debugPrint('Error checking for updates: $e');
-      if (!silent) {
+      if (!silent && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error checking for updates: $e')),
         );
@@ -122,79 +125,120 @@ class UpdateService {
     String url,
     bool forceUpdate,
   ) {
+    // ValueNotifier for reactive UI updates
+    // progress: -1 (not started), 0-100 (downloading)
+    final ValueNotifier<int> progressNotifier = ValueNotifier<int>(-1);
+
     showDialog(
       context: context,
       barrierDismissible: !forceUpdate,
-      builder: (context) => AlertDialog(
-        title: Text('Update Available: $version'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (notes != null) ...[Text(notes), const SizedBox(height: 10)],
-            const Text(
-              'A new version of the app is available. Please update to continue.',
-            ),
-          ],
-        ),
-        actions: [
-          if (!forceUpdate)
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Later'),
-            ),
-          TextButton(
-            onPressed: () {
+      builder: (dialogContext) => ValueListenableBuilder<int>(
+        valueListenable: progressNotifier,
+        builder: (context, progress, child) {
+          final isDownloading = progress >= 0;
+          return GlassUpdateDialog(
+            version: version,
+            releaseNotes: notes,
+            forceUpdate: forceUpdate,
+            isDownloading: isDownloading,
+            downloadProgress: progress,
+            onUpdate: () {
+              // Start update locally
+              _performUpdate(context, url, progressNotifier);
+            },
+            onLater: () => Navigator.pop(context),
+            onOpenBrowser: () {
               Navigator.pop(context);
               _fallbackUrlLaunch(context, url);
             },
-            child: const Text('Open in Browser'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _performUpdate(context, url);
-            },
-            child: const Text('Update Now'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
   void _showNoUpdateDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('No Updates'),
-        content: const Text('You are using the latest version of the app.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: GlassCard(
+          isDark: isDark,
+          borderRadius: 20,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle_outline, size: 60, color: Colors.green),
+                const SizedBox(height: 16),
+                Text(
+                  'No Updates',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: GlassTheme.text(isDark),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You are using the latest version of the app.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: GlassTheme.text(isDark).withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: GlassTheme.accent(isDark),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Future<void> _performUpdate(BuildContext context, String url) async {
+  Future<void> _performUpdate(
+    BuildContext context,
+    String url,
+    ValueNotifier<int> progressNotifier,
+  ) async {
     if (Platform.isAndroid) {
       try {
+        progressNotifier.value = 0; // Start loading state
         await _showProgressNotification(0);
-        // Use ota_update for direct APK download and install
-        // Note: The URL must be a direct link to the APK file
+
         OtaUpdate()
             .execute(url)
             .listen(
               (OtaEvent event) {
                 if (event.status == OtaStatus.DOWNLOADING) {
                   final progress = int.tryParse(event.value ?? '0') ?? 0;
+                  progressNotifier.value = progress;
                   _showProgressNotification(progress);
-                  debugPrint('Downloading: ${event.value}%');
                 } else if (event.status == OtaStatus.INSTALLING) {
                   _cancelNotification();
-                  debugPrint('Installing...');
+                  // Optionally close dialog or show "Installing..."
+                } else if (event.status == OtaStatus.DOWNLOAD_ERROR) {
+                  // Handle download error gracefully
+                  _cancelNotification();
+                  debugPrint('OTA Download Error: ${event.value}');
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    _handleUpdateError(
+                      context,
+                      url,
+                      'Download failed. Please try again or download from browser.',
+                    );
+                  }
                 } else {
                   debugPrint('OTA Status: ${event.status}');
                 }
@@ -202,20 +246,26 @@ class UpdateService {
               onError: (e) {
                 _cancelNotification();
                 debugPrint('OTA Stream Error: $e');
-                _handleUpdateError(context, url, e.toString());
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  _handleUpdateError(context, url, e.toString());
+                }
               },
               onDone: () {
-                // Note: onDone might not be called if installation takes over
                 _cancelNotification();
               },
             );
       } catch (e) {
         await _cancelNotification();
         debugPrint('OTA Error: $e');
-        _handleUpdateError(context, url, e.toString());
+        if (context.mounted) {
+          _handleUpdateError(context, url, e.toString());
+          Navigator.pop(context);
+        }
       }
     } else {
-      // iOS or other platforms: just open the URL
+      // iOS or fallback
+      Navigator.pop(context);
       _fallbackUrlLaunch(context, url);
     }
   }

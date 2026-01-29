@@ -9,7 +9,7 @@ import '../../providers/quran_provider.dart';
 import '../../config/glass_theme.dart';
 import '../../widgets/glass/glass_card.dart';
 import '../../providers/settings_provider.dart';
-import 'tafseer_screen.dart';
+import 'enhanced_tafseer_screen.dart';
 
 class TranslationView extends StatefulWidget {
   final QuranSurah surah;
@@ -460,11 +460,68 @@ class _TranslationViewState extends State<TranslationView> {
     Color textColor,
     Color accentColor,
   ) {
-    return AyahTranslationCarousel(
-      translations: translations,
-      isDark: isDark,
-      textColor: textColor,
-      accentColor: accentColor,
+    return Consumer<QuranProvider>(
+      builder: (context, provider, _) {
+        final selectedKeys = provider.selectedTranslationKeys;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
+            const Divider(),
+            ...selectedKeys.map((key) {
+              final translation = translations[key];
+              if (translation == null || translation.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              final translationNames = {
+                'basein': 'ဦးဘစိန်',
+                'ghazi': 'ဃာဇီဟာရှင်မ်',
+                'hashim': 'ဟာရှင်မ်တင်မြင့်',
+              };
+
+              return Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        translationNames[key] ?? key,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: accentColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      translation,
+                      style: TextStyle(
+                        fontFamily: 'Myanmar',
+                        fontSize: 18,
+                        height: 1.6,
+                        color: textColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        );
+      },
     );
   }
 
@@ -473,7 +530,7 @@ class _TranslationViewState extends State<TranslationView> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TafseerScreen(
+        builder: (context) => EnhancedTafseerScreen(
           ayahKey: ayahKey,
           surahName: widget.surah.englishName,
           ayahNumber: ayah.numberInSurah,
@@ -498,8 +555,8 @@ class _TranslationViewState extends State<TranslationView> {
     final provider = Provider.of<QuranProvider>(context, listen: false);
     final translationNames = {
       'basein': 'ဦးဘစိန်',
-      'ghazimohammadha': 'ဃာဇီဟာရှင်မ်',
-      'hashimtinmyint': 'ဟာရှင်မ်တင်မြင့်',
+      'ghazi': 'ဃာဇီဟာရှင်မ်',
+      'hashim': 'ဟာရှင်မ်တင်မြင့်',
     };
 
     final translationKey = provider.selectedTranslationKey;
@@ -552,7 +609,9 @@ class _TranslationViewState extends State<TranslationView> {
                 textColor: textColor,
                 onTap: () {
                   Navigator.pop(context);
-                  Share.share('${ayah.text}\n\n[$reference]');
+                  SharePlus.instance.share(
+                    ShareParams(text: '${ayah.text}\n\n[$reference]'),
+                  );
                 },
               ),
               if (translation.isNotEmpty) ...[
@@ -563,7 +622,9 @@ class _TranslationViewState extends State<TranslationView> {
                   textColor: textColor,
                   onTap: () {
                     Navigator.pop(context);
-                    Share.share('$translation\n\n[$reference]');
+                    SharePlus.instance.share(
+                      ShareParams(text: '$translation\n\n[$reference]'),
+                    );
                   },
                 ),
                 const SizedBox(height: 12),
@@ -573,8 +634,11 @@ class _TranslationViewState extends State<TranslationView> {
                   textColor: textColor,
                   onTap: () {
                     Navigator.pop(context);
-                    Share.share(
-                      '${ayah.text}\n\n$translatorName:\n$translation\n\n[$reference]',
+                    SharePlus.instance.share(
+                      ShareParams(
+                        text:
+                            '${ayah.text}\n\n$translatorName:\n$translation\n\n[$reference]',
+                      ),
                     );
                   },
                 ),
@@ -645,15 +709,11 @@ class AyahTranslationCarousel extends StatefulWidget {
 class _AyahTranslationCarouselState extends State<AyahTranslationCarousel> {
   late PageController _pageController;
   late int _currentIndex;
-  final List<String> _translationKeys = [
-    'ghazimohammadha',
-    'basein',
-    'hashimtinmyint',
-  ];
+  final List<String> _translationKeys = ['ghazi', 'basein', 'hashim'];
   final Map<String, String> _translationNames = {
     'basein': 'ဦးဘစိန်',
-    'ghazimohammadha': 'ဃာဇီဟာရှင်မ်',
-    'hashimtinmyint': 'ဟာရှင်မ်တင်မြင့်',
+    'ghazi': 'ဃာဇီဟာရှင်မ်',
+    'hashim': 'ဟာရှင်မ်တင်မြင့်',
   };
 
   @override

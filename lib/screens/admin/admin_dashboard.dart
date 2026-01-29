@@ -15,7 +15,7 @@ import 'package:munajat_e_maqbool_app/screens/admin/analytics_dashboard_screen.d
 import 'package:munajat_e_maqbool_app/screens/admin/payment_methods_screen.dart';
 import 'package:munajat_e_maqbool_app/screens/admin/subscription_requests_screen.dart';
 import 'package:munajat_e_maqbool_app/screens/admin/masjid_approval_screen.dart';
-import 'package:munajat_e_maqbool_app/services/cleanup_service.dart';
+import 'package:munajat_e_maqbool_app/screens/admin/app_version_management_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -26,7 +26,6 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> {
   final AdminService _adminService = AdminService();
-  final CleanupService _cleanupService = CleanupService();
   Map<String, dynamic> _stats = {};
   bool _isLoading = true;
 
@@ -236,13 +235,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         ),
 
                         _buildActionTile(
-                          icon: Icons.cleaning_services,
-                          title: 'Deep Clean Storage',
-                          subtitle: 'Remove unused images',
-                          onTap: _cleanOrphanedFiles,
+                          icon: Icons.system_update,
+                          title: 'App Updates',
+                          subtitle: 'Manage versions and APKs',
+                          onTap: _navigateToAppVersions,
                           isDark: isDark,
                           textColor: textColor,
-                          accentColor: Colors.red,
+                          accentColor: Colors.blueGrey,
                         ),
 
                         const SizedBox(height: 24),
@@ -500,69 +499,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Future<void> _cleanOrphanedFiles() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Deep Clean Storage'),
-        content: const Text(
-          'Your SQL Cron Job automatically deletes old Order Records.\n\n'
-          'This tool detects and deletes the "Orphaned Images" left behind in storage.\n\n'
-          'Proceed to delete unused images?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Clean Now',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      setState(() => _isLoading = true);
-      try {
-        final result = await _cleanupService.cleanOrphanedFiles();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Scanned ${result['scanned']} files. Deleted ${result['deleted']} orphans.',
-              ),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Cleanup failed: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-      }
-    }
-  }
-
   void _navigateToSubscriptionRequests() {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const SubscriptionRequestsScreen(),
+      ),
+    );
+  }
+
+  void _navigateToAppVersions() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AppVersionManagementScreen(),
       ),
     );
   }

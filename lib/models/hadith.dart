@@ -89,4 +89,41 @@ class Hadith {
       sunnahHadithId: json['sunnahHadithId'],
     );
   }
+
+  /// Factory constructor for database rows
+  factory Hadith.fromDbRow(Map<String, dynamic> row) {
+    return Hadith(
+      id: row['id'] ?? 0,
+      idInBook: row['hadith_number'] ?? row['id'] ?? 0,
+      chapterId: row['chapter_id'] ?? 0,
+      bookId: row['book_id'] ?? 0,
+      arabic: row['text_arabic'] ?? '',
+      english: {
+        'narrator': row['narrator_english'] ?? '',
+        'text': row['text_english'] ?? '',
+      },
+      burmese: {
+        'narrator': row['narrator_myanmar'] ?? '',
+        'text': row['text_myanmar'] ?? '',
+      },
+      references: row['reference'] != null
+          ? HadithReferences(
+              reference: row['reference'] ?? '',
+              inBookReference: '',
+              uscMsaWebReference: '',
+            )
+          : null,
+      chapterInfo:
+          row['chapter_english'] != null ||
+              row['chapter_arabic'] != null ||
+              row['chapter_number'] != null
+          ? HadithChapterInfo(
+              english: row['chapter_english'] ?? '',
+              arabic: row['chapter_arabic'] ?? '',
+              number: row['chapter_number'] ?? '',
+            )
+          : null,
+      sunnahHadithId: null,
+    );
+  }
 }

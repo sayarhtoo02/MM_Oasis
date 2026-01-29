@@ -1,0 +1,15 @@
+{
+    "mcpServers": {
+        "cloudflare": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@ironclads/cloudflare-mcp"
+            ],
+            "env": {
+                "CLOUDFLARE_API_TOKEN": "YOUR_API_TOKEN_HERE",
+                "CLOUDFLARE_EMAIL": "your-email@example.com"
+            }
+        }
+    }
+}

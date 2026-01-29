@@ -9,6 +9,8 @@ import 'package:munajat_e_maqbool_app/widgets/glass/glass_scaffold.dart';
 import 'package:munajat_e_maqbool_app/widgets/glass/glass_card.dart';
 import 'package:munajat_e_maqbool_app/providers/settings_provider.dart';
 import 'quran_reading_screen.dart';
+import 'khatam_planner_screen.dart';
+import '../services/reading_stats_service.dart';
 
 class QuranScreen extends StatefulWidget {
   const QuranScreen({super.key});
@@ -254,7 +256,11 @@ class _QuranScreenState extends State<QuranScreen>
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(4.0),
-                          child: Image.asset('assets/icons/icon_masjid.png'),
+                          child: Image.asset(
+                            'assets/icons/icon_masjid.png',
+                            width: 32,
+                            height: 32,
+                          ),
                         ),
                       ),
                     ],
@@ -264,12 +270,99 @@ class _QuranScreenState extends State<QuranScreen>
             ),
 
             const SizedBox(height: 16),
+            _buildReadingStatsCard(isDark, textColor, accentColor),
+            const SizedBox(height: 16),
             _buildLastReadCard(isDark, textColor, accentColor),
             _buildQuickAccessSection(isDark, textColor, accentColor),
           ],
         ),
       ),
       secondChild: const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildReadingStatsCard(
+    bool isDark,
+    Color textColor,
+    Color accentColor,
+  ) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: ReadingStatsService.getProgressSummary(),
+      builder: (context, snapshot) {
+        final totalRead = snapshot.data?['total_verses_read'] ?? 0;
+        final percentage = snapshot.data?['percentage'] ?? 0.0;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: GlassCard(
+            isDark: isDark,
+            borderRadius: 16,
+            padding: const EdgeInsets.all(16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const KhatamPlannerScreen(),
+                ),
+              ).then((_) => setState(() {})); // Refresh stats on return
+            },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.auto_graph_rounded,
+                          color: accentColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Progress',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${percentage.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: accentColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: percentage / 100,
+                    backgroundColor: textColor.withValues(alpha: 0.1),
+                    color: accentColor,
+                    minHeight: 6,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '$totalRead of 6236 verses read',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: textColor.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

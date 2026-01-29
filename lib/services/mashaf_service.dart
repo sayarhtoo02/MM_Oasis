@@ -1,214 +1,104 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import '../models/mashaf_models.dart';
-import 'tajweed/tajweed_data_provider.dart';
+import 'database/oasismm_database.dart';
+import 'dart:convert';
 
 class MashafService {
-  static Database? _layoutDatabase;
-  static Database? _wordsDatabase;
-
-  /// Layout database for pages and info
-  Future<Database> get layoutDatabase async {
-    if (_layoutDatabase != null) return _layoutDatabase!;
-    _layoutDatabase = await _initLayoutDatabase();
-    return _layoutDatabase!;
-  }
-
-  /// Words database for Quran text
-  Future<Database> get wordsDatabase async {
-    if (_wordsDatabase != null) return _wordsDatabase!;
-    _wordsDatabase = await _initWordsDatabase();
-    return _wordsDatabase!;
-  }
-
-  Future<Database> _initLayoutDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'qudratullah_layout.db');
-
-    final exists = await databaseExists(path);
-
-    if (!exists) {
-      debugPrint('Copying layout database from asset...');
-      try {
-        await Directory(dirname(path)).create(recursive: true);
-      } catch (_) {}
-
-      ByteData data = await rootBundle.load(
-        'assets/quran_data/mushaf_layout_data/qudratullah-indopak-15-lines.db',
-      );
-      List<int> bytes = data.buffer.asUint8List(
-        data.offsetInBytes,
-        data.lengthInBytes,
-      );
-      await File(path).writeAsBytes(bytes, flush: true);
-      debugPrint('Layout database copied to $path');
-    } else {
-      debugPrint('Opening existing layout database at $path');
-    }
-
-    var db = await openDatabase(path, readOnly: true);
-
-    // Verify tables exist
-    var tables = await db.rawQuery(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='info'",
-    );
-    if (tables.isEmpty) {
-      debugPrint('Layout DB corrupted. Re-copying...');
-      await db.close();
-      await deleteDatabase(path);
-      ByteData data = await rootBundle.load(
-        'assets/quran_data/mushaf_layout_data/qudratullah-indopak-15-lines.db',
-      );
-      List<int> bytes = data.buffer.asUint8List(
-        data.offsetInBytes,
-        data.lengthInBytes,
-      );
-      await File(path).writeAsBytes(bytes, flush: true);
-      db = await openDatabase(path, readOnly: true);
-    }
-
-    var allTables = await db.rawQuery(
-      "SELECT name FROM sqlite_master WHERE type='table'",
-    );
-    debugPrint('Layout DB Tables: $allTables');
-
-    return db;
-  }
-
-  Future<Database> _initWordsDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'indopak_nastaleeq_words.db');
-
-    // Always delete and recopy to ensure we have latest version with Tajweed data
-    final exists = await databaseExists(path);
-    if (exists) {
-      debugPrint(
-        'Deleting existing words database to update with Tajweed data...',
-      );
-      await deleteDatabase(path);
-    }
-
-    debugPrint('Copying words database from asset...');
-    try {
-      await Directory(dirname(path)).create(recursive: true);
-    } catch (_) {}
-
-    ByteData data = await rootBundle.load(
-      'assets/quran_data/quran_scripts/indopak-nastaleeq.db',
-    );
-    List<int> bytes = data.buffer.asUint8List(
-      data.offsetInBytes,
-      data.lengthInBytes,
-    );
-    await File(path).writeAsBytes(bytes, flush: true);
-    debugPrint('Words database copied to $path');
-
-    var db = await openDatabase(path, readOnly: true);
-
-    var allTables = await db.rawQuery(
-      "SELECT name FROM sqlite_master WHERE type='table'",
-    );
-    debugPrint('Words DB Tables: $allTables');
-
-    // Initialize Tajweed Data Provider
-    debugPrint('Initializing Tajweed Data Provider...');
-    await TajweedDataProvider().load();
-
-    return db;
-  }
-
   Future<MashafInfo?> getMashafInfo() async {
     try {
-      final db = await layoutDatabase;
-      final List<Map<String, dynamic>> maps = await db.query('info');
-      if (maps.isNotEmpty) {
-        return MashafInfo.fromMap(maps.first);
+      final pages = await OasisMMDatabase.getMashafPage(1);
+      if (pages.isNotEmpty) {
+        return MashafInfo(
+          name: 'Indopak 15 lines(Qudratullah)',
+          numberOfPages: 610,
+          linesPerPage: 15,
+          fontName: 'indopak-nastaleeq',
+        );
       }
     } catch (e, stackTrace) {
       debugPrint('Error getting mashaf info: $e');
       debugPrint(stackTrace.toString());
-      rethrow;
+    }
+    return null;
+  }
+
+  int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) {
+      if (value.isEmpty) return null;
+      return int.tryParse(value);
     }
     return null;
   }
 
   Future<List<MashafPageLine>> getPageLines(int pageNumber) async {
     try {
-      final layoutDb = await layoutDatabase;
-      final wordsDb = await wordsDatabase;
+      // Get layout data for this page
+      final layoutData = await OasisMMDatabase.getMashafPage(pageNumber);
 
-      // Get lines for the page from layout database
-      final List<Map<String, dynamic>> lineMaps = await layoutDb.query(
-        'pages',
-        where: 'page_number = ?',
-        whereArgs: [pageNumber],
-        orderBy: 'line_number ASC',
-      );
+      if (layoutData.isEmpty) {
+        debugPrint('No layout data for page $pageNumber');
+        return [];
+      }
 
       final List<MashafPageLine> lines = [];
 
-      // Helper to safely parse int from dynamic
-      int? parseIntOrNull(dynamic value) {
-        if (value == null) return null;
-        if (value is int) return value;
-        if (value is String) {
-          if (value.isEmpty) return null;
-          return int.tryParse(value);
-        }
-        return null;
+      // Group by line
+      final lineGroups = <int, List<Map<String, dynamic>>>{};
+      for (var row in layoutData) {
+        final lineNum = _toInt(row['line']) ?? 0;
+        lineGroups.putIfAbsent(lineNum, () => []);
+        lineGroups[lineNum]!.add(row);
       }
 
-      for (var lineMap in lineMaps) {
-        final int? firstWordId = parseIntOrNull(lineMap['first_word_id']);
-        final int? lastWordId = parseIntOrNull(lineMap['last_word_id']);
+      for (var lineNum in lineGroups.keys.toList()..sort()) {
+        final lineData = lineGroups[lineNum]!.first;
+
+        // Parse data_json if available
+        Map<String, dynamic> jsonData = {};
+        if (lineData['data_json'] != null) {
+          try {
+            jsonData = json.decode(lineData['data_json'] as String);
+          } catch (_) {}
+        }
+
+        final surah =
+            _toInt(lineData['surah']) ??
+            _toInt(jsonData['sura']) ??
+            _toInt(jsonData['surah_number']) ??
+            0;
+        final firstWordId = _toInt(jsonData['first_word_id']) ?? 0;
+        final lastWordId = _toInt(jsonData['last_word_id']) ?? 0;
 
         List<MashafWord> words = [];
 
-        // Only fetch words if both IDs are valid
-        if (firstWordId != null &&
-            lastWordId != null &&
-            firstWordId > 0 &&
-            lastWordId > 0) {
-          final List<Map<String, dynamic>> wordMaps = await wordsDb.query(
-            'words',
-            where: 'id >= ? AND id <= ?',
-            whereArgs: [firstWordId, lastWordId],
-            orderBy: 'id ASC',
+        if (firstWordId > 0 && lastWordId > 0) {
+          // Fetch words in range from indopak_words table
+          // This avoids duplicating ayahs that span multiple lines
+          final wordRows = await OasisMMDatabase.getIndopakWordsInRange(
+            firstWordId,
+            lastWordId,
           );
 
-          words = wordMaps.map((map) {
-            final mutableMap = Map<String, dynamic>.from(map);
-            final surah = (map['sura'] ?? map['surah'] ?? map['chapter_id']);
-            final ayah = (map['ayah'] ?? map['verse_id']);
-            int wordNum = 0;
-            if (map.containsKey('word_position') &&
-                map['word_position'] != null) {
-              wordNum = map['word_position'] as int;
-            } else if (map.containsKey('word') && map['word'] != null) {
-              wordNum = map['word'] as int;
-            }
-
-            // Inject JSON Tajweed data if available
-            if (surah is int && ayah is int && wordNum > 0) {
-              final tajweed = TajweedDataProvider().getTajweed(
-                surah,
-                ayah,
-                wordNum,
-                map['text'] as String,
-              );
-              if (tajweed != null) {
-                mutableMap['text_tajweed'] = tajweed;
-              }
-            }
-
-            return MashafWord.fromMap(mutableMap);
+          words = wordRows.map((wordMap) {
+            return MashafWord.fromMap(wordMap);
           }).toList();
         }
 
-        lines.add(MashafPageLine.fromMap(lineMap, words));
+        lines.add(
+          MashafPageLine(
+            pageNumber: pageNumber,
+            lineNumber: lineNum,
+            lineType: jsonData['line_type']?.toString() ?? 'normal',
+            isCentered:
+                jsonData['is_centered'] == 1 || jsonData['is_centered'] == true,
+            firstWordId: firstWordId,
+            lastWordId: lastWordId,
+            surahNumber: surah,
+            words: words,
+          ),
+        );
       }
 
       return lines;
@@ -220,18 +110,18 @@ class MashafService {
 
   Future<int> getSurahStartPage(int surahNumber) async {
     try {
-      final db = await layoutDatabase;
-      final List<Map<String, dynamic>> result = await db.query(
-        'pages',
+      final db = await OasisMMDatabase.database;
+      final result = await db.query(
+        'mashaf_pages',
         columns: ['page_number'],
-        where: 'surah_number = ?',
+        where: 'surah = ?',
         whereArgs: [surahNumber],
-        orderBy: 'page_number ASC, line_number ASC',
+        orderBy: 'page_number ASC',
         limit: 1,
       );
 
       if (result.isNotEmpty) {
-        return result.first['page_number'] as int;
+        return result.first['page_number'] as int? ?? 1;
       }
     } catch (e) {
       debugPrint('Error getting surah start page: $e');
@@ -241,19 +131,9 @@ class MashafService {
 
   Future<int> getSurahForPage(int pageNumber) async {
     try {
-      final db = await layoutDatabase;
-      final List<Map<String, dynamic>> result = await db.query(
-        'pages',
-        columns: ['surah_number'],
-        where: 'page_number = ?',
-        whereArgs: [pageNumber],
-        limit: 1,
-      );
-
-      if (result.isNotEmpty) {
-        final val = result.first['surah_number'];
-        if (val is int) return val;
-        if (val is String) return int.tryParse(val) ?? 1;
+      final pages = await OasisMMDatabase.getMashafPage(pageNumber);
+      if (pages.isNotEmpty) {
+        return pages.first['surah'] as int? ?? 1;
       }
     } catch (e) {
       debugPrint('Error getting surah for page: $e');
@@ -263,46 +143,17 @@ class MashafService {
 
   Future<int> getPageForAyah(int surahNumber, int ayahNumber) async {
     try {
-      // 1. Find the first word ID for this Ayah
-      final wordsDb = await wordsDatabase;
-      final List<Map<String, dynamic>> wordResult = await wordsDb.query(
-        'words',
-        columns: ['id', 'page_number'], // Request page_number if it exists
-        where: 'surah_number = ? AND ayah_number = ?',
-        whereArgs: [surahNumber, ayahNumber],
-        orderBy: 'id ASC',
-        limit: 1,
-      );
-
-      if (wordResult.isEmpty) return 0;
-
-      // Note: The words DB might already have page_number!
-      if (wordResult.first.containsKey('page_number') &&
-          wordResult.first['page_number'] != null) {
-        final page = wordResult.first['page_number'];
-        if (page is int && page > 0) return page;
-        if (page is String) {
-          final p = int.tryParse(page);
-          if (p != null && p > 0) return p;
-        }
-      }
-
-      final int wordId = wordResult.first['id'] as int;
-
-      // 2. Find the page containing this word in layout DB
-      final layoutDb = await layoutDatabase;
-      final List<Map<String, dynamic>> pageResult = await layoutDb.query(
-        'pages',
+      final db = await OasisMMDatabase.database;
+      final result = await db.query(
+        'mashaf_pages',
         columns: ['page_number'],
-        where: 'first_word_id <= ? AND last_word_id >= ?',
-        whereArgs: [wordId, wordId],
+        where: 'surah = ? AND ayah = ?',
+        whereArgs: [surahNumber, ayahNumber],
         limit: 1,
       );
 
-      if (pageResult.isNotEmpty) {
-        final val = pageResult.first['page_number'];
-        if (val is int) return val;
-        if (val is String) return int.tryParse(val) ?? 0;
+      if (result.isNotEmpty) {
+        return result.first['page_number'] as int? ?? 0;
       }
     } catch (e) {
       debugPrint('Error getting page for ayah: $e');
@@ -310,14 +161,29 @@ class MashafService {
     return 0;
   }
 
+  Future<List<Map<String, int>>> getVersesOnPage(int pageNumber) async {
+    try {
+      final lines = await getPageLines(pageNumber);
+      final Set<String> uniqueVerses = {};
+      final List<Map<String, int>> results = [];
+
+      for (var line in lines) {
+        for (var word in line.words) {
+          final key = '${word.surah}:${word.ayah}';
+          if (!uniqueVerses.contains(key)) {
+            uniqueVerses.add(key);
+            results.add({'surahId': word.surah, 'verseNumber': word.ayah});
+          }
+        }
+      }
+      return results;
+    } catch (e) {
+      debugPrint('Error getting verses on page: $e');
+      return [];
+    }
+  }
+
   Future<void> close() async {
-    if (_layoutDatabase != null) {
-      await _layoutDatabase!.close();
-      _layoutDatabase = null;
-    }
-    if (_wordsDatabase != null) {
-      await _wordsDatabase!.close();
-      _wordsDatabase = null;
-    }
+    // No separate databases to close - using OasisMMDatabase
   }
 }

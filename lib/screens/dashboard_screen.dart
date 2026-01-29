@@ -644,7 +644,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         return;
     }
 
-    // For screens NOT in MainAppShell tabs, navigate with push
+    // For screens NOT in MainAppShell tabs, navigate within Shell
     Widget? screen;
     switch (title) {
       case 'Ramadan':
@@ -671,28 +671,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     if (screen != null) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => screen!,
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position:
-                  Tween<Offset>(
-                    begin: const Offset(1.0, 0.0),
-                    end: Offset.zero,
-                  ).animate(
-                    CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    ),
-                  ),
-              child: child,
-            );
-          },
-          transitionDuration: const Duration(milliseconds: 350),
-        ),
-      );
+      // Use Global Navigation (Shell)
+      mainAppShellKey.currentState?.openFeature(screen);
     }
   }
 

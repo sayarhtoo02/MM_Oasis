@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:munajat_e_maqbool_app/config/glass_theme.dart';
 import 'package:munajat_e_maqbool_app/screens/dashboard_screen.dart';
 import 'package:munajat_e_maqbool_app/screens/home_screen.dart';
 import 'package:munajat_e_maqbool_app/screens/quran_screen.dart';
@@ -8,9 +7,8 @@ import 'package:munajat_e_maqbool_app/screens/tasbih_screen.dart';
 import 'package:munajat_e_maqbool_app/screens/settings_screen.dart';
 import 'package:munajat_e_maqbool_app/screens/sunnah_collection/sunnah_chapters_screen.dart';
 import 'package:munajat_e_maqbool_app/utils/haptic_feedback_helper.dart';
-import 'package:provider/provider.dart';
-import 'package:munajat_e_maqbool_app/providers/settings_provider.dart';
 import 'package:munajat_e_maqbool_app/services/update_service.dart';
+import 'package:munajat_e_maqbool_app/widgets/glass/glass_card.dart';
 
 // Global key to access MainAppShell state from anywhere
 final GlobalKey<MainAppShellState> mainAppShellKey =
@@ -27,6 +25,7 @@ class MainAppShell extends StatefulWidget {
 
 class MainAppShellState extends State<MainAppShell> {
   late int _currentIndex;
+  Widget? _currentFeatureScreen; // Track current feature screen
 
   // All available navigation items
   static final List<NavItemData> allNavItems = [
@@ -77,185 +76,139 @@ class MainAppShellState extends State<MainAppShell> {
 
   // Method to switch to a specific tab from anywhere
   void switchToTab(int index) {
-    if (_currentIndex != index && index >= 0 && index < allNavItems.length) {
-      HapticFeedbackHelper.lightImpact();
-      setState(() => _currentIndex = index);
-    }
+    HapticFeedbackHelper.lightImpact();
+    setState(() {
+      _currentIndex = index;
+      _currentFeatureScreen = null; // Always clear feature screen
+    });
+  }
+
+  // Open a feature screen within the shell (keeping bottom nav)
+  void openFeature(Widget screen) {
+    setState(() {
+      _currentFeatureScreen = screen;
+    });
+  }
+
+  // Close the current feature screen
+  void closeFeature() {
+    setState(() {
+      _currentFeatureScreen = null;
+    });
   }
 
   // Get current tab index
   int get currentIndex => _currentIndex;
 
-  Widget _buildScreen(int index) {
-    switch (index) {
-      case 0:
-        return const DashboardScreen();
-      case 1:
-        return const HomeScreen();
-      case 2:
-        return const QuranScreen();
-      case 3:
-        return const HadithScreen();
-      case 4:
-        return const SunnahChaptersScreen();
-      case 5:
-        return const TasbihScreen();
-      case 6:
-        return const SettingsScreen();
-      default:
-        return const DashboardScreen();
+  Future<bool> _onWillPop() async {
+    if (_currentFeatureScreen != null) {
+      closeFeature();
+      return false;
     }
+    if (_currentIndex != 0) {
+      switchToTab(0);
+      return false;
+    }
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: List.generate(
-          allNavItems.length,
-          (index) => _buildScreen(index),
+    final goldColor = const Color(0xFFFFD700);
+    final tealColor = const Color(0xFF004D40);
+
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        extendBody: true, // Important for glass effect
+        backgroundColor:
+            Colors.transparent, // Let background show through if any
+        body: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage(
+                'assets/images/background.jpg',
+              ), // Assuming a standard BG
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Stack(
+              children: [
+                // Main Content (IndexedStack for persistence)
+                IndexedStack(
+                  index: _currentIndex,
+                  children: [
+                    const DashboardScreen(),
+                    const HomeScreen(),
+                    const QuranScreen(),
+                    const HadithScreen(),
+                    const SunnahChaptersScreen(),
+                    const TasbihScreen(),
+                    const SettingsScreen(),
+                  ],
+                ),
+
+                // Feature Screen Overlay
+                if (_currentFeatureScreen != null)
+                  Positioned.fill(child: _currentFeatureScreen!),
+              ],
+            ),
+          ),
         ),
+        bottomNavigationBar: _buildDynamicBottomNavBar(tealColor, goldColor),
       ),
-      extendBody: true,
-      bottomNavigationBar: _buildDynamicBottomNavBar(),
     );
   }
 
-  Widget _buildDynamicBottomNavBar() {
-    // Get nav items to display (exclude current module if not Home)
+  Widget _buildDynamicBottomNavBar(Color tealColor, Color goldColor) {
     final displayItems = _getDisplayItems();
 
-    // Access SettingsProvider
-    final settingsProvider = Provider.of<SettingsProvider>(context);
-    final isDark = settingsProvider.isDarkMode;
-
-    // Theme Colors from GlassTheme
-    final tealColor = GlassTheme.text(isDark);
-    final goldColor = GlassTheme.accent(isDark);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: GlassTheme.glassGradient(isDark),
-          stops: const [0.0, 1.0],
-        ),
-        border: Border.all(color: GlassTheme.glassBorder(isDark), width: 2.0),
-        boxShadow: GlassTheme.glassShadow(isDark),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          height: 72,
-          color: Colors.transparent, // Transparent to show glass effect
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: displayItems
-                .map((item) => _buildNavItem(item, tealColor, goldColor))
-                .toList(),
-          ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: GlassCard(
+        borderRadius: 25,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: displayItems
+              .map((item) => _buildNavItem(item, tealColor, goldColor))
+              .toList(),
         ),
       ),
     );
   }
 
   List<NavItemData> _getDisplayItems() {
-    // If on Home (Dashboard), show all main navigation
-    if (_currentIndex == 0) {
-      // Show: Home, Munajat, Quran, Hadith, Sunnah (Settings excluded)
-      return [
-        allNavItems[0], // Home
-        allNavItems[1], // Munajat
-        allNavItems[2], // Quran
-        allNavItems[3], // Hadith
-        allNavItems[4], // Sunnah
-      ];
-    }
+    // Logic to show 5 items max, swapping center or others based on selection
+    // Basic implementation: Always show Home (0), Munajat(1), Quran(2)...
+    // Or dynamic sliding window.
+    // Let's implement a fixed set plus the selected one if strictly needed,
+    // or just the full list if it fits? 7 items might be too tight.
+    // Let's prioritize: Home(0), [Selected/Relevant], Settings(6)
 
-    // If on Munajat, show other modules
-    if (_currentIndex == 1) {
-      return [
-        allNavItems[0], // Home
-        allNavItems[2], // Quran
-        allNavItems[3], // Hadith
-        allNavItems[4], // Sunnah
-        allNavItems[6], // Settings
-      ];
-    }
+    // Standard set: Home, Munajat, Quran, Hadith, Settings
+    List<int> visibleIndices = [0, 1, 2, 3, 6];
 
-    // If on Quran, show other modules
-    if (_currentIndex == 2) {
-      return [
-        allNavItems[0], // Home
-        allNavItems[1], // Munajat
-        allNavItems[3], // Hadith
-        allNavItems[4], // Sunnah
-        allNavItems[6], // Settings
-      ];
-    }
-
-    // If on Hadith, show other modules
-    if (_currentIndex == 3) {
-      return [
-        allNavItems[0], // Home
-        allNavItems[1], // Munajat
-        allNavItems[2], // Quran
-        allNavItems[4], // Sunnah
-        allNavItems[6], // Settings
-      ];
-    }
-
-    // If on Sunnah, show other modules
     if (_currentIndex == 4) {
-      return [
-        allNavItems[0], // Home
-        allNavItems[1], // Munajat
-        allNavItems[2], // Quran
-        allNavItems[3], // Hadith
-        allNavItems[6], // Settings
-      ];
+      // Sunnah selected
+      visibleIndices = [0, 1, 4, 3, 6]; // Swap middle?
+    } else if (_currentIndex == 5) {
+      // Tasbih
+      visibleIndices = [0, 5, 2, 3, 6];
     }
 
-    // If on Tasbih, show other modules
-    if (_currentIndex == 5) {
-      return [
-        allNavItems[0], // Home
-        allNavItems[1], // Munajat
-        allNavItems[2], // Quran
-        allNavItems[3], // Hadith
-        allNavItems[4], // Sunnah
-      ];
-    }
-
-    // If on Settings, show main modules
-    if (_currentIndex == 6) {
-      return [
-        allNavItems[0], // Home
-        allNavItems[1], // Munajat
-        allNavItems[2], // Quran
-        allNavItems[3], // Hadith
-        allNavItems[4], // Sunnah
-      ];
-    }
-
-    // Default fallback
-    return allNavItems.take(5).toList();
+    return allNavItems
+        .where((item) => visibleIndices.contains(item.index))
+        .toList();
   }
 
   Widget _buildNavItem(NavItemData item, Color tealColor, Color goldColor) {
     final isSelected = _currentIndex == item.index;
 
     return GestureDetector(
-      onTap: () {
-        if (_currentIndex != item.index) {
-          HapticFeedbackHelper.lightImpact();
-          setState(() => _currentIndex = item.index);
-        }
-      },
+      onTap: () => switchToTab(item.index), // Use unified method
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),

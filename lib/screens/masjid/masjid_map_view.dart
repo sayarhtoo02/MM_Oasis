@@ -1,16 +1,13 @@
 import 'dart:async';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:munajat_e_maqbool_app/config/glass_theme.dart';
 import 'package:munajat_e_maqbool_app/providers/settings_provider.dart';
 import 'package:munajat_e_maqbool_app/services/masjid_service.dart';
 import 'package:munajat_e_maqbool_app/services/masjid_image_service.dart';
-import 'package:munajat_e_maqbool_app/services/location_service.dart';
 import 'package:munajat_e_maqbool_app/screens/masjid/masjid_detail_screen.dart';
 
 class MasjidMapView extends StatefulWidget {
@@ -27,9 +24,10 @@ class _MasjidMapViewState extends State<MasjidMapView> {
 
   List<Map<String, dynamic>> _masjids = [];
   Set<Marker> _markers = {};
-  Map<String, BitmapDescriptor> _customIcons = {};
-  bool _isLoading = true;
+  final Map<String, BitmapDescriptor> _customIcons = {};
+  bool _isLoading = false; // Changed initial to false as we load on map idle
   LatLng _currentPosition = const LatLng(16.8661, 96.1951); // Default: Yangon
+  Timer? _debounceTimer; // For map movement
 
   @override
   void initState() {
@@ -39,7 +37,9 @@ class _MasjidMapViewState extends State<MasjidMapView> {
 
   Future<void> _initMap() async {
     await _getCurrentLocation();
-    await _loadMasjids();
+    // _loadMasjids() removed. We rely on onCameraIdle or initial position.
+    // If we want initial data before map moves, we could fetch radius.
+    // But onCameraIdle will trigger once map is created and settled.
   }
 
   Future<void> _getCurrentLocation() async {
@@ -57,17 +57,36 @@ class _MasjidMapViewState extends State<MasjidMapView> {
         setState(() {
           _currentPosition = LatLng(position.latitude, position.longitude);
         });
+        // Move camera to user location
+        final controller = await _controller.future;
+        controller.animateCamera(CameraUpdate.newLatLng(_currentPosition));
       }
     } catch (e) {
       debugPrint('Location error: $e');
     }
   }
 
-  Future<void> _loadMasjids() async {
+  void _onCameraIdle() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _fetchVisibleMasjids();
+    });
+  }
+
+  Future<void> _fetchVisibleMasjids() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
-      final masjids = await _masjidService.getMasjids();
+      final controller = await _controller.future;
+      final bounds = await controller.getVisibleRegion();
+
+      final masjids = await _masjidService.getMasjidsInBounds(
+        south: bounds.southwest.latitude,
+        west: bounds.southwest.longitude,
+        north: bounds.northeast.latitude,
+        east: bounds.northeast.longitude,
+      );
 
       // Enrich with logos
       if (masjids.isNotEmpty) {
@@ -84,12 +103,15 @@ class _MasjidMapViewState extends State<MasjidMapView> {
 
       if (mounted) {
         setState(() {
-          _masjids = masjids;
+          _masjids = masjids; // Replace list with visible ones? Or merge?
+          // For simple bounds, replacing is fine to avoid memory growth.
+          // But cleaning up markers is needed. _buildMarkers rebuilds from _masjids.
           _isLoading = false;
           _buildMarkers();
         });
       }
     } catch (e) {
+      debugPrint('Error fetching visible masjids: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -319,6 +341,7 @@ class _MasjidMapViewState extends State<MasjidMapView> {
               zoom: 14,
             ),
             onMapCreated: (controller) => _controller.complete(controller),
+            onCameraIdle: _onCameraIdle, // Add bounds listener
             markers: _markers,
             myLocationEnabled: true,
             myLocationButtonEnabled: false,

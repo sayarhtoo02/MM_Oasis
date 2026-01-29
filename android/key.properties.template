@@ -1,0 +1,8 @@
+# Keystore configuration for release builds
+# Copy this file to key.properties and fill in your values
+# IMPORTANT: Do NOT commit key.properties to version control!
+
+storePassword=your_keystore_password
+keyPassword=your_key_password
+keyAlias=your_key_alias
+storeFile=../keystore/release-keystore.jks

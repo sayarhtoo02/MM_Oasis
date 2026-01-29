@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
 import 'tajweed_rule.dart';
+import '../database/oasismm_database.dart';
 
 class TajweedDataProvider {
   static final TajweedDataProvider _instance = TajweedDataProvider._internal();
@@ -12,35 +11,52 @@ class TajweedDataProvider {
 
   Map<String, String>? _tajweedMap;
   bool _isLoaded = false;
+  bool _isLoading = false;
 
   Future<void> load() async {
-    if (_isLoaded) return;
+    if (_isLoaded || _isLoading) return;
+    _isLoading = true;
 
     try {
-      debugPrint('Loading Tajweed JSON data...');
-      final jsonString = await rootBundle.loadString(
-        'assets/quran_data/quran_tajweed_indopak.json',
+      debugPrint('Loading Tajweed data from database...');
+
+      // Get all indopak words with tajweed data
+      final db = await OasisMMDatabase.database;
+      final rows = await db.query(
+        'indopak_words',
+        columns: ['surah', 'ayah', 'word', 'text_tajweed'],
+        where: 'text_tajweed IS NOT NULL AND text_tajweed != ""',
       );
-      final List<dynamic> jsonData = json.decode(jsonString);
 
       _tajweedMap = {};
-      for (final item in jsonData) {
-        if (item is Map<String, dynamic>) {
-          // Key format: surah:ayah:word
-          final key = '${item['surah']}:${item['ayah']}:${item['word']}';
-          _tajweedMap![key] = item['text_tajweed_indopak'] ?? '';
+      for (final row in rows) {
+        final surah = row['surah'];
+        final ayah = row['ayah'];
+        final word = row['word'];
+        final textTajweed = row['text_tajweed'] as String?;
+
+        if (surah != null &&
+            ayah != null &&
+            word != null &&
+            textTajweed != null) {
+          final key = '$surah:$ayah:$word';
+          _tajweedMap![key] = textTajweed;
         }
       }
 
       _isLoaded = true;
-      debugPrint('Loaded ${_tajweedMap?.length} Tajweed words.');
+      _isLoading = false;
+      debugPrint(
+        'Loaded ${_tajweedMap?.length ?? 0} Tajweed words from database.',
+      );
     } catch (e) {
-      debugPrint('Error loading Tajweed JSON: $e');
-      _tajweedMap = {}; // Empty map on error to prevent nulls
+      debugPrint('Error loading Tajweed data: $e');
+      _tajweedMap = {};
+      _isLoading = false;
     }
   }
 
-  // Mapping from JSON XML-like tags to TajweedRule
+  // Mapping from XML-like tags to TajweedRule
   static final Map<String, TajweedRule> ruleMapping = {
     'ghunnah': TajweedRule.ghunna,
     'idgham_ghunnah': TajweedRule.idghamWithGhunna,
@@ -73,11 +89,7 @@ class TajweedDataProvider {
     return _parseAndSerialize(rawTajweed, originalText);
   }
 
-  // Import html parser
-  // (Add this to imports at top of file: import 'package:html/parser.dart' as html_parser; import 'package:html/dom.dart' as dom;)
-
   String _parseAndSerialize(String tajweedText, String originalText) {
-    // Use full parse to ensure custom tags like <rule> are parsed correctly (usually land in body)
     final document = html_parser.parse(tajweedText);
     final nodes = document.body?.nodes ?? [];
 
@@ -86,7 +98,6 @@ class TajweedDataProvider {
       _traverseNodes(node, segments, TajweedRule.none);
     }
 
-    // If parsing produced nothing (empty string?), fallback to original text
     if (segments.isEmpty) {
       return '$originalText:${TajweedRule.none.index}';
     }

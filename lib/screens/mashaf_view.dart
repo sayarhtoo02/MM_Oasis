@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/quran_provider.dart';
+import '../../services/database/oasismm_database.dart';
 import 'mashaf/mashaf_page.dart';
 
 class MashafView extends StatefulWidget {
@@ -24,7 +23,7 @@ class MashafView extends StatefulWidget {
 }
 
 class _MashafViewState extends State<MashafView> {
-  Map<String, dynamic>? _surahMetadata;
+  List<Map<String, dynamic>> _surahs = [];
 
   @override
   void initState() {
@@ -37,11 +36,9 @@ class _MashafViewState extends State<MashafView> {
 
   Future<void> _loadMetadata() async {
     try {
-      final surahJson = await rootBundle.loadString(
-        'assets/quran_data/quran-metadata-surah-name.json',
-      );
+      final surahs = await OasisMMDatabase.getSurahs();
       setState(() {
-        _surahMetadata = json.decode(surahJson);
+        _surahs = surahs;
       });
     } catch (e) {
       debugPrint('Error loading metadata: $e');
@@ -49,8 +46,12 @@ class _MashafViewState extends State<MashafView> {
   }
 
   Map<String, dynamic>? _getSurahInfo(int surahNumber) {
-    if (_surahMetadata == null) return null;
-    return _surahMetadata!['$surahNumber'];
+    if (_surahs.isEmpty) return null;
+    try {
+      return _surahs.firstWhere((s) => s['id'] == surahNumber);
+    } catch (_) {
+      return null;
+    }
   }
 
   int _getJuzForPage(int pageNumber) {
@@ -96,9 +97,7 @@ class _MashafViewState extends State<MashafView> {
                   return MashafPage(
                     pageNumber: pageNumber,
                     isLandscape: isLandscape,
-                    surahInfo: _getSurahInfo(
-                      1,
-                    ), // TODO: Get correct surah info for page
+                    surahInfo: _getSurahInfo(1),
                     juzNumber: _getJuzForPage(pageNumber),
                     hizbInfo: _getHizbForPage(pageNumber),
                     onAyahTap: widget.onAyahTap,

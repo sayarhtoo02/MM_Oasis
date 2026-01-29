@@ -41,6 +41,7 @@ class _ShopOwnerDashboardState extends State<ShopOwnerDashboard> {
     'views': 0,
   };
   bool _isLoading = true;
+  int _selectedShopIndex = 0; // NEW: Track selected shop context
 
   @override
   void initState() {
@@ -65,6 +66,10 @@ class _ShopOwnerDashboardState extends State<ShopOwnerDashboard> {
           _subscriptionPlan = plan;
           _dashboardStats = stats;
           _isLoading = false;
+          // Ensure index is valid if list shrinks/changes
+          if (_selectedShopIndex >= _myShops.length) {
+            _selectedShopIndex = 0;
+          }
         });
       }
     } catch (e) {
@@ -152,14 +157,63 @@ class _ShopOwnerDashboardState extends State<ShopOwnerDashboard> {
                     elevation: 0,
                     flexibleSpace: FlexibleSpaceBar(
                       titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-                      title: Text(
-                        'Dashboard',
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
-                      ),
+                      title: _myShops.isEmpty
+                          ? Text(
+                              'Dashboard',
+                              style: TextStyle(
+                                color: textColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 24,
+                              ),
+                            )
+                          : PopupMenuButton<int>(
+                              initialValue: _selectedShopIndex,
+                              onSelected: (index) {
+                                setState(() {
+                                  _selectedShopIndex = index;
+                                });
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _myShops[_selectedShopIndex]['name'] ??
+                                          'Shop',
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 24,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                    color: textColor.withValues(alpha: 0.7),
+                                  ),
+                                ],
+                              ),
+                              itemBuilder: (context) {
+                                return List.generate(_myShops.length, (index) {
+                                  return PopupMenuItem(
+                                    value: index,
+                                    child: Text(
+                                      _myShops[index]['name'] ?? 'Shop',
+                                      style: TextStyle(
+                                        color: index == _selectedShopIndex
+                                            ? accentColor
+                                            : null,
+                                        fontWeight: index == _selectedShopIndex
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  );
+                                });
+                              },
+                            ),
                       background: Align(
                         alignment: Alignment.centerRight,
                         child: Padding(
@@ -440,8 +494,8 @@ class _ShopOwnerDashboardState extends State<ShopOwnerDashboard> {
               context,
               MaterialPageRoute(
                 builder: (context) => ShopMenuEditor(
-                  shopId: _myShops[0]['id'],
-                  shopName: _myShops[0]['name'] ?? 'Shop',
+                  shopId: _myShops[_selectedShopIndex]['id'],
+                  shopName: _myShops[_selectedShopIndex]['name'] ?? 'Shop',
                 ),
               ),
             );
@@ -458,8 +512,8 @@ class _ShopOwnerDashboardState extends State<ShopOwnerDashboard> {
               context,
               MaterialPageRoute(
                 builder: (context) => ShopOrdersScreen(
-                  shopId: _myShops[0]['id'],
-                  shopName: _myShops[0]['name'] ?? 'Shop',
+                  shopId: _myShops[_selectedShopIndex]['id'],
+                  shopName: _myShops[_selectedShopIndex]['name'] ?? 'Shop',
                 ),
               ),
             );
@@ -470,8 +524,13 @@ class _ShopOwnerDashboardState extends State<ShopOwnerDashboard> {
         'icon': Icons.campaign_outlined,
         'label': 'Promote',
         'color': Colors.orange,
-        'onTap': () =>
-            _showPromotionDialog(context, isDark, textColor, accentColor),
+        'onTap': () => _showPromotionDialog(
+          context,
+          isDark,
+          textColor,
+          accentColor,
+          _myShops[_selectedShopIndex], // Pass selected shop
+        ),
       },
       {
         'icon': Icons.settings_outlined,
@@ -482,7 +541,8 @@ class _ShopOwnerDashboardState extends State<ShopOwnerDashboard> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ShopEditScreen(shopId: _myShops[0]['id']),
+                builder: (context) =>
+                    ShopEditScreen(shopId: _myShops[_selectedShopIndex]['id']),
               ),
             ).then((_) => _loadMyShops());
           }
@@ -693,7 +753,9 @@ class _ShopOwnerDashboardState extends State<ShopOwnerDashboard> {
     bool isDark,
     Color textColor,
     Color accentColor,
+    Map<String, dynamic> shop, // New param
   ) {
+    // validation for empty shops is handled by caller now or implicitly
     if (_myShops.isEmpty) return;
 
     final titleController = TextEditingController();
@@ -749,7 +811,7 @@ class _ShopOwnerDashboardState extends State<ShopOwnerDashboard> {
             onPressed: () async {
               try {
                 await _adsService.requestPromotion(
-                  shopId: _myShops[0]['id'],
+                  shopId: shop['id'],
                   adTitle: titleController.text,
                   adDescription: descController.text,
                   bannerUrl: urlController.text,

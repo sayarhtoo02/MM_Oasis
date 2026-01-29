@@ -1,6 +1,5 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
 import '../models/allah_name.dart';
+import 'database/oasismm_database.dart';
 
 class AllahNamesService {
   static final AllahNamesService _instance = AllahNamesService._internal();
@@ -11,10 +10,24 @@ class AllahNamesService {
 
   Future<List<AllahName>> getNames() async {
     if (_names != null) return _names!;
-    
-    final String data = await rootBundle.loadString('assets/99names.json');
-    final List<dynamic> jsonList = json.decode(data);
-    _names = jsonList.map((json) => AllahName.fromJson(json)).toList();
+
+    final rows = await OasisMMDatabase.getAllahNames();
+    _names = rows
+        .map(
+          (row) => AllahName(
+            arabic: row['arabic'] ?? '',
+            english: row['english'] ?? '',
+            urduMeaning: row['urdu_meaning'] ?? '',
+            englishMeaning: row['english_meaning'] ?? '',
+            englishExplanation: row['english_explanation'] ?? '',
+          ),
+        )
+        .toList();
+
     return _names!;
+  }
+
+  void clearCache() {
+    _names = null;
   }
 }

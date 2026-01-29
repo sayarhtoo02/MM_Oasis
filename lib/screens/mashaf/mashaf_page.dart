@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/quran_provider.dart';
 import '../../models/mashaf_models.dart';
+import '../../services/database/oasismm_database.dart';
 import 'mashaf_header_footer.dart';
 import 'mashaf_line_builder.dart';
 
@@ -52,13 +51,13 @@ class _MashafPageState extends State<MashafPage> {
       final firstLine = lines.first;
       if (firstLine.surahNumber > 0) {
         try {
-          final surahJson = await rootBundle.loadString(
-            'assets/quran_data/quran-metadata-surah-name.json',
+          final surahs = await OasisMMDatabase.getSurahs();
+          final surah = surahs.firstWhere(
+            (s) => s['id'] == firstLine.surahNumber,
+            orElse: () => {},
           );
-          final metadata = json.decode(surahJson);
-          final surah = metadata['${firstLine.surahNumber}'];
-          if (surah != null) {
-            surahName = surah['name_simple'] ?? '';
+          if (surah.isNotEmpty) {
+            surahName = surah['name_transliteration'] ?? surah['name'] ?? '';
           }
         } catch (_) {}
       }
@@ -162,19 +161,15 @@ class _MashafPageState extends State<MashafPage> {
             final availableHeight = constraints.maxHeight;
             final availableWidth = constraints.maxWidth;
 
-            // DYNAMIC FONT SCALING CALCULATION (V2)
-            // We want to fill height in portrait, but ensure width-readability in landscape.
             double dynamicFontSize;
             final surahCount =
                 _lines?.where((l) => l.lineType == 'surah_name').length ?? 0;
             if (isLandscape) {
-              // If we have 3+ surahs, use a significantly smaller font factor
               final factor = surahCount >= 3
                   ? 24.0
                   : (surahCount >= 2 ? 22.0 : 19.5);
               dynamicFontSize = (availableWidth / factor).clamp(24.0, 48.0);
             } else {
-              // In portrait, use a safer factor for multiple surahs
               final factor = surahCount >= 2 ? 31.0 : 29.0;
               dynamicFontSize = (availableHeight / factor).clamp(18.0, 42.0);
             }

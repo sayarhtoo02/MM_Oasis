@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/quran_provider.dart';
 import '../providers/settings_provider.dart';
 import '../config/glass_theme.dart';
+import '../services/database/oasismm_database.dart';
 import 'mashaf/mashaf_page.dart';
 
 /// Main Mashaf screen with page-by-page Quran display
@@ -19,7 +18,7 @@ class MashafScreen extends StatefulWidget {
 
 class _MashafScreenState extends State<MashafScreen> {
   late final PageController _pageController;
-  Map<String, dynamic>? _surahMetadata;
+  List<Map<String, dynamic>> _surahs = [];
 
   @override
   void initState() {
@@ -34,11 +33,9 @@ class _MashafScreenState extends State<MashafScreen> {
 
   Future<void> _loadMetadata() async {
     try {
-      final surahJson = await rootBundle.loadString(
-        'assets/quran_data/quran-metadata-surah-name.json',
-      );
+      final surahs = await OasisMMDatabase.getSurahs();
       setState(() {
-        _surahMetadata = json.decode(surahJson);
+        _surahs = surahs;
       });
     } catch (e) {
       debugPrint('Error loading metadata: $e');
@@ -46,8 +43,12 @@ class _MashafScreenState extends State<MashafScreen> {
   }
 
   Map<String, dynamic>? _getSurahInfo(int surahNumber) {
-    if (_surahMetadata == null) return null;
-    return _surahMetadata!['$surahNumber'];
+    if (_surahs.isEmpty) return null;
+    try {
+      return _surahs.firstWhere((s) => s['id'] == surahNumber);
+    } catch (_) {
+      return null;
+    }
   }
 
   int _getJuzForPage(int pageNumber) {

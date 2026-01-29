@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import '../providers/quran_provider.dart';
 import '../widgets/tafseer_widget.dart';
 import '../services/tafseer_service.dart';
 import '../providers/settings_provider.dart';
@@ -34,6 +35,9 @@ class _EnhancedTafseerScreenState extends State<EnhancedTafseerScreen>
   bool _showScrollToTop = false;
   bool _isFullscreen = false;
   bool _isBookmarked = false;
+  late PageController _pageController;
+  late int _currentAyahIndex;
+  late int _surahNumber;
 
   final String _currentLanguage = 'my';
 
@@ -46,6 +50,16 @@ class _EnhancedTafseerScreenState extends State<EnhancedTafseerScreen>
   @override
   void initState() {
     super.initState();
+    final parts = widget.ayahKey.split(':');
+    _surahNumber = int.parse(parts[0]);
+    final initialAyah = int.parse(parts[1]);
+
+    // We need to know total ayahs to bound the PageView
+    // For now, let's assume we can get it or just use a large number
+    // Better: Get it from QuranProvider cache if possible
+    _currentAyahIndex = initialAyah - 1;
+    _pageController = PageController(initialPage: _currentAyahIndex);
+
     _scrollController.addListener(_scrollListener);
     _fabAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -142,6 +156,7 @@ class _EnhancedTafseerScreenState extends State<EnhancedTafseerScreen>
   void dispose() {
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
+    _pageController.dispose();
     _fabAnimationController.dispose();
     _appBarAnimationController.dispose();
     super.dispose();
@@ -429,57 +444,76 @@ Shared from Munajat-e-Maqbool App
         final textColor = GlassTheme.text(isDark);
         final accentColor = GlassTheme.accent(isDark);
 
+        final quranProvider = context.read<QuranProvider>();
+        final surah = quranProvider.surahs.firstWhere(
+          (s) => s.number == _surahNumber,
+        );
+        final totalAyahs = surah.numberOfAyahs;
+
         if (_isFullscreen) {
           return Scaffold(
             backgroundColor: _backgroundColor,
             body: SafeArea(
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: Icon(Icons.arrow_back, color: _textColor),
-                          ),
-                          Expanded(
-                            child: Text(
-                              widget.surahName != null &&
-                                      widget.ayahNumber != null
-                                  ? '${widget.surahName} - Ayah ${widget.ayahNumber}'
-                                  : 'Tafseer Ibn Kathir',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: _textColor,
-                                fontWeight: FontWeight.w600,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: totalAyahs,
+                itemBuilder: (context, index) {
+                  final ayahNum = index + 1;
+                  final currentAyahKey = '$_surahNumber:$ayahNum';
+
+                  return SingleChildScrollView(
+                    controller: index == _currentAyahIndex
+                        ? _scrollController
+                        : null,
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                onPressed: () => Navigator.pop(context),
+                                icon: Icon(Icons.arrow_back, color: _textColor),
                               ),
-                            ),
+                              Expanded(
+                                child: Text(
+                                  '${widget.surahName} - Ayah $ayahNum',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: _textColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: _showReadingOptionsBottomSheet,
+                                icon: Icon(Icons.tune, color: _textColor),
+                              ),
+                              IconButton(
+                                onPressed: _toggleFullscreen,
+                                icon: Icon(
+                                  Icons.fullscreen_exit,
+                                  color: _textColor,
+                                ),
+                              ),
+                            ],
                           ),
-                          IconButton(
-                            onPressed: _showReadingOptionsBottomSheet,
-                            icon: Icon(Icons.tune, color: _textColor),
-                          ),
-                          IconButton(
-                            onPressed: _toggleFullscreen,
-                            icon: Icon(
-                              Icons.fullscreen_exit,
-                              color: _textColor,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                        TafseerWidget(
+                          ayahKey: currentAyahKey,
+                          language: _currentLanguage,
+                        ),
+                        const SizedBox(height: 100),
+                      ],
                     ),
-                    TafseerWidget(
-                      ayahKey: widget.ayahKey,
-                      language: _currentLanguage,
-                    ),
-                    const SizedBox(height: 100),
-                  ],
-                ),
+                  );
+                },
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentAyahIndex = index;
+                  });
+                },
               ),
             ),
             floatingActionButton: AnimatedBuilder(
@@ -544,29 +578,45 @@ Shared from Munajat-e-Maqbool App
               );
             },
           ),
-          body: SingleChildScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                if (widget.surahName != null && widget.ayahNumber != null)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      '${widget.surahName} - Ayah ${widget.ayahNumber}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: textColor.withValues(alpha: 0.7),
+          body: PageView.builder(
+            controller: _pageController,
+            itemCount: totalAyahs,
+            itemBuilder: (context, index) {
+              final ayahNum = index + 1;
+              final currentAyahKey = '$_surahNumber:$ayahNum';
+
+              return SingleChildScrollView(
+                controller: index == _currentAyahIndex
+                    ? _scrollController
+                    : null,
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    if (widget.surahName != null)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          '${widget.surahName} - Ayah $ayahNum',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: textColor.withValues(alpha: 0.7),
+                          ),
+                        ),
                       ),
+                    TafseerWidget(
+                      ayahKey: currentAyahKey,
+                      language: _currentLanguage,
                     ),
-                  ),
-                TafseerWidget(
-                  ayahKey: widget.ayahKey,
-                  language: _currentLanguage,
+                    const SizedBox(height: 100),
+                  ],
                 ),
-                const SizedBox(height: 100),
-              ],
-            ),
+              );
+            },
+            onPageChanged: (index) {
+              setState(() {
+                _currentAyahIndex = index;
+              });
+            },
           ),
         );
       },

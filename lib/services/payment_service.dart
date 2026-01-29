@@ -2,11 +2,14 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:munajat_e_maqbool_app/services/admin_supabase_client.dart';
+import 'package:munajat_e_maqbool_app/services/r2_storage_service.dart';
 
 class PaymentService {
   final SupabaseClient _supabase = Supabase.instance.client;
   // Admin client that bypasses RLS
   final SupabaseClient _adminClient = AdminSupabaseClient.client;
+  // R2 Storage for file uploads
+  final R2StorageService _r2Storage = R2StorageService();
 
   // ============ PAYMENT METHODS ============
 
@@ -96,18 +99,12 @@ class PaymentService {
     if (user == null) throw Exception('Not authenticated');
 
     try {
-      // Upload screenshot
-      final fileName =
-          '${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final path = 'subscription-screenshots/$fileName';
-
-      await _supabase.storage
-          .from('shop-images') // Reuse existing bucket
-          .upload(path, screenshotFile);
-
-      final screenshotUrl = _supabase.storage
-          .from('shop-images')
-          .getPublicUrl(path);
+      // Upload screenshot using R2StorageService
+      final screenshotUrl = await _r2Storage.uploadFile(
+        file: screenshotFile,
+        path:
+            'payment_screenshots/${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
 
       // Create request
       await _supabase

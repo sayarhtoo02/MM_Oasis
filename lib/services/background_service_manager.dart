@@ -8,13 +8,15 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class BackgroundServiceManager {
-  static Future<void> initializeService() async {
-    final service = FlutterBackgroundService();
+  static final FlutterBackgroundService _service = FlutterBackgroundService();
 
-    await service.configure(
+  /// Configure the service (does NOT auto-start)
+  static Future<void> initializeService() async {
+    await _service.configure(
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
-        autoStart: true,
+        autoStart:
+            false, // CRITICAL: Don't auto-start before notification channel exists
         isForegroundMode: true,
         notificationChannelId: 'shop_orders',
         initialNotificationTitle: 'Shop Monitoring Active',
@@ -22,16 +24,28 @@ class BackgroundServiceManager {
         foregroundServiceNotificationId: 888,
       ),
       iosConfiguration: IosConfiguration(
-        autoStart: true,
+        autoStart: false, // Also disable for iOS
         onForeground: onStart,
         onBackground: onIosBackground,
       ),
     );
   }
 
+  /// Start the service manually after notification channel is created
+  static Future<void> startService() async {
+    final isRunning = await _service.isRunning();
+    if (!isRunning) {
+      await _service.startService();
+    }
+  }
+
   static Future<void> requestUnrestrictedBattery() async {
-    if (await Permission.ignoreBatteryOptimizations.isDenied) {
-      await Permission.ignoreBatteryOptimizations.request();
+    try {
+      if (await Permission.ignoreBatteryOptimizations.isDenied) {
+        await Permission.ignoreBatteryOptimizations.request();
+      }
+    } catch (e) {
+      debugPrint('Battery optimization permission error: $e');
     }
   }
 }

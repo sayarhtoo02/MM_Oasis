@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="external_files" path="."/>
+    <!-- External storage for general file sharing -->
+    <external-path name="external_files" path="." />
+    
+    <!-- Internal app files directory - required for OTA updates -->
+    <files-path name="internal_files" path="." />
+    
+    <!-- Cache directory -->
+    <cache-path name="cache_files" path="." />
+    
+    <!-- External files directory -->
+    <external-files-path name="external_app_files" path="." />
+    
+    <!-- Specific OTA update path -->
+    <files-path name="ota_update" path="ota_update/" />
 </paths>

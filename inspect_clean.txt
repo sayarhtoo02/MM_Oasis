@@ -1,0 +1,13 @@
+Checking DB at: E:\Munajat App\munajat_e_maqbool_app\data_archive\quran_data\quran_scripts\indopak-nastaleeq.db
+Tables: ['words']
+
+Schema for table 'words':
+  id (INTEGER)
+  location (TEXT)
+  surah (INTEGER)
+  ayah (INTEGER)
+  word (INTEGER)
+  text (TEXT)
+  text_tajweed (TEXT)
+  Row count: 83668
+  Sample row: (1, '1:1:1', 1, 1, 1, 'بِسْمِ', 'بِسۡمِ:13')

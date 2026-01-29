@@ -30,11 +30,15 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen>
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  String _searchText = '';
+  final TextEditingController _searchController = TextEditingController();
+
   List<Map<String, dynamic>> _allOrders = [];
   bool _isLoading = true;
   int _previousOrderCount = 0;
 
   final List<String> _tabs = [
+    'All', // New "All" tab
     'Pending',
     'Payment',
     'Preparing',
@@ -144,9 +148,29 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen>
     );
   }
 
-  List<Map<String, dynamic>> _getOrdersForTab(int tabIndex) {
+  @override
+  void dispose() {
+    _ordersSubscription?.cancel();
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // ... (Notification methods remain unchanged)
+
+  // Helper to count orders for badges
+  int _getCountForTab(int index) {
+    // We use the same filtering logic but without search text for counts
+    // to show total available in that tab
+    return _filterOrders(_getOrdersForTabIndex(index), '').length;
+  }
+
+  // Refactored to get raw list for tab index
+  List<Map<String, dynamic>> _getOrdersForTabIndex(int tabIndex) {
     switch (tabIndex) {
-      case 0: // Pending
+      case 0: // All
+        return _allOrders;
+      case 1: // Pending
         return _allOrders
             .where(
               (o) =>
@@ -154,15 +178,15 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen>
                   o['status'] == 'payment_uploaded',
             )
             .toList();
-      case 1: // Payment
+      case 2: // Payment
         return _allOrders
             .where((o) => o['status'] == 'payment_confirmed')
             .toList();
-      case 2: // Preparing
+      case 3: // Preparing
         return _allOrders.where((o) => o['status'] == 'preparing').toList();
-      case 3: // Ready
+      case 4: // Ready
         return _allOrders.where((o) => o['status'] == 'ready').toList();
-      case 4: // Completed
+      case 5: // Completed
         return _allOrders
             .where(
               (o) => o['status'] == 'completed' || o['status'] == 'cancelled',
@@ -171,6 +195,26 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen>
       default:
         return [];
     }
+  }
+
+  // Apply Search Filter
+  List<Map<String, dynamic>> _filterOrders(
+    List<Map<String, dynamic>> orders,
+    String query,
+  ) {
+    if (query.isEmpty) return orders;
+    return orders.where((order) {
+      final id = order['id'].toString().toLowerCase();
+      final name = (order['customer_name'] ?? '').toString().toLowerCase();
+      final phone = (order['customer_phone'] ?? '').toString().toLowerCase();
+      final q = query.toLowerCase();
+      return id.contains(q) || name.contains(q) || phone.contains(q);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _getOrdersForTab(int tabIndex) {
+    final rawOrders = _getOrdersForTabIndex(tabIndex);
+    return _filterOrders(rawOrders, _searchText);
   }
 
   Future<void> _updateStatus(String orderId, String newStatus) async {
@@ -196,13 +240,6 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen>
   }
 
   @override
-  void dispose() {
-    _ordersSubscription?.cancel();
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(
       builder: (context, settings, _) {
@@ -213,7 +250,6 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen>
         return GlassScaffold(
           title: 'Orders - ${widget.shopName}',
           actions: [
-            // Removed refresh button as it's realtime now, maybe keep as manual sync just in case
             IconButton(
               icon: const Icon(Icons.sync),
               onPressed: () {
@@ -224,13 +260,93 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen>
           ],
           body: Column(
             children: [
+              // 1. Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  borderRadius: BorderRadius.circular(12),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchText = value;
+                      });
+                    },
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      hintText: 'Search by Name, Order ID...',
+                      hintStyle: TextStyle(
+                        color: textColor.withValues(alpha: 0.5),
+                        fontSize: 14,
+                      ),
+                      border: InputBorder.none,
+                      icon: Icon(
+                        Icons.search,
+                        color: textColor.withValues(alpha: 0.5),
+                      ),
+                      suffixIcon: _searchText.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: textColor.withValues(alpha: 0.5),
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchText = '';
+                                });
+                              },
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+
+              // 2. Tab Bar with Badges
               TabBar(
                 controller: _tabController,
                 isScrollable: true,
                 labelColor: accentColor,
                 unselectedLabelColor: textColor.withValues(alpha: 0.5),
                 indicatorColor: accentColor,
-                tabs: _tabs.map((t) => Tab(text: t)).toList(),
+                tabs: List.generate(_tabs.length, (index) {
+                  final label = _tabs[index];
+                  final count = _getCountForTab(index);
+                  return Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(label),
+                        if (count > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: accentColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$count',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: accentColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
               ),
               Expanded(
                 child: _isLoading
@@ -298,7 +414,7 @@ class _ShopOrdersScreenState extends State<ShopOrdersScreen>
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
-        isDark: isDark,
+        isDarkForce: isDark,
         borderRadius: 16,
         onTap: () => _showOrderDetails(order, isDark, textColor, accentColor),
         child: Padding(

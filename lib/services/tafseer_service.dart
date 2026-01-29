@@ -1,30 +1,34 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'database/oasismm_database.dart';
 
 class TafseerService {
-  static const String _basePath = 'assets/quran_data/tasfeer-ibn-kasir';
-
   /// Load Myanmar Tafseer for specific ayah
   static Future<List<TafseerItem>> getMyanmarTafseer(String ayahKey) async {
     try {
-      // Find the correct part file containing this ayah
-      final partFile = await _findPartFile(ayahKey, 'my-ibn-kasir');
-      if (partFile == null) return [];
+      final parts = ayahKey.split(':');
+      if (parts.length != 2) return [];
 
-      final jsonString = await rootBundle.loadString(
-        '$_basePath/my-ibn-kasir/$partFile',
+      final surahId = int.tryParse(parts[0]) ?? 0;
+      final ayahNumber = int.tryParse(parts[1]) ?? 0;
+
+      final results = await OasisMMDatabase.getTafseer(
+        surahId,
+        ayahNumber,
+        'mm',
       );
-      final List<dynamic> data = json.decode(jsonString);
 
-      return data
-          .where((item) {
-            final itemAyahKey = item['ayah_key']?.toString();
-            final itemAyahKeys = item['ayah_keys']?.toString();
-
-            return itemAyahKey == ayahKey ||
-                (itemAyahKeys?.split(',').contains(ayahKey) == true);
-          })
-          .map((item) => TafseerItem.fromJson(item))
+      return results
+          .map(
+            (row) => TafseerItem(
+              ayahKey: ayahKey,
+              groupAyahKey:
+                  '${row['surah_id']}:${row['verse_start']}-${row['verse_end'] ?? row['verse_start']}',
+              fromAyah: '${row['surah_id']}:${row['verse_start']}',
+              toAyah:
+                  '${row['surah_id']}:${row['verse_end'] ?? row['verse_start']}',
+              ayahKeys: '',
+              text: row['text'] ?? '',
+            ),
+          )
           .toList();
     } catch (e) {
       return [];
@@ -34,76 +38,35 @@ class TafseerService {
   /// Load English Tafseer for specific ayah
   static Future<List<TafseerItem>> getEnglishTafseer(String ayahKey) async {
     try {
-      final partFile = await _findPartFile(ayahKey, 'en-ibn-kasir');
-      if (partFile == null) return [];
+      final parts = ayahKey.split(':');
+      if (parts.length != 2) return [];
 
-      final jsonString = await rootBundle.loadString(
-        '$_basePath/en-ibn-kasir/$partFile',
+      final surahId = int.tryParse(parts[0]) ?? 0;
+      final ayahNumber = int.tryParse(parts[1]) ?? 0;
+
+      final results = await OasisMMDatabase.getTafseer(
+        surahId,
+        ayahNumber,
+        'en',
       );
-      final List<dynamic> data = json.decode(jsonString);
 
-      return data
-          .where((item) {
-            final itemAyahKey = item['ayah_key']?.toString();
-            final itemAyahKeys = item['ayah_keys']?.toString();
-
-            return itemAyahKey == ayahKey ||
-                (itemAyahKeys?.split(',').contains(ayahKey) == true);
-          })
-          .map((item) => TafseerItem.fromJson(item))
+      return results
+          .map(
+            (row) => TafseerItem(
+              ayahKey: ayahKey,
+              groupAyahKey:
+                  '${row['surah_id']}:${row['verse_start']}-${row['verse_end'] ?? row['verse_start']}',
+              fromAyah: '${row['surah_id']}:${row['verse_start']}',
+              toAyah:
+                  '${row['surah_id']}:${row['verse_end'] ?? row['verse_start']}',
+              ayahKeys: '',
+              text: row['text'] ?? '',
+            ),
+          )
           .toList();
     } catch (e) {
       return [];
     }
-  }
-
-  /// Find which part file contains the ayah
-  static Future<String?> _findPartFile(String ayahKey, String language) async {
-    try {
-      final manifestContent = await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-
-      final partFiles = manifestMap.keys
-          .where(
-            (key) =>
-                key.contains('$_basePath/$language/part_') &&
-                key.endsWith('.json'),
-          )
-          .map((key) => key.split('/').last)
-          .toList();
-
-      // Sort files numerically
-      partFiles.sort((a, b) {
-        final aNum = int.tryParse(a.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-        final bNum = int.tryParse(b.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-        return aNum.compareTo(bNum);
-      });
-
-      // Check files sequentially
-      for (String partFile in partFiles) {
-        try {
-          final jsonString = await rootBundle.loadString(
-            '$_basePath/$language/$partFile',
-          );
-          final List<dynamic> data = json.decode(jsonString);
-
-          final hasAyah = data.any((item) {
-            final itemAyahKey = item['ayah_key']?.toString();
-            final itemAyahKeys = item['ayah_keys']?.toString();
-
-            return itemAyahKey == ayahKey ||
-                (itemAyahKeys?.split(',').contains(ayahKey) == true);
-          });
-
-          if (hasAyah) return partFile;
-        } catch (e) {
-          continue;
-        }
-      }
-    } catch (e) {
-      // Ignore error
-    }
-    return null;
   }
 }
 

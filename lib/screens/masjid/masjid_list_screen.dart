@@ -6,7 +6,6 @@ import 'package:munajat_e_maqbool_app/widgets/glass/masjid_card.dart';
 import 'package:munajat_e_maqbool_app/widgets/glass/glass_card.dart';
 import 'package:munajat_e_maqbool_app/providers/settings_provider.dart';
 import 'package:munajat_e_maqbool_app/services/masjid_service.dart';
-import 'package:munajat_e_maqbool_app/services/auth_service.dart';
 import 'package:munajat_e_maqbool_app/services/location_service.dart';
 import 'package:munajat_e_maqbool_app/widgets/app_background_pattern.dart';
 import 'package:munajat_e_maqbool_app/screens/masjid/masjid_map_view.dart';

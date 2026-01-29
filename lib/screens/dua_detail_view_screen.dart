@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import 'package:munajat_e_maqbool_app/models/dua_item.dart';
 import 'package:munajat_e_maqbool_app/providers/settings_provider.dart';
+import 'package:munajat_e_maqbool_app/services/database/oasismm_database.dart';
 import '../config/glass_theme.dart';
 import '../widgets/glass/glass_scaffold.dart';
 import '../widgets/glass/glass_card.dart';
 
 class DuaDetailViewScreen extends StatefulWidget {
+  final int categoryId;
   final String categoryName;
   final String categorySlug;
   final String language;
@@ -16,6 +16,7 @@ class DuaDetailViewScreen extends StatefulWidget {
 
   const DuaDetailViewScreen({
     super.key,
+    required this.categoryId,
     required this.categoryName,
     required this.categorySlug,
     required this.language,
@@ -42,15 +43,28 @@ class _DuaDetailViewScreenState extends State<DuaDetailViewScreen> {
 
   Future<void> _loadDuas() async {
     try {
-      final String response = await rootBundle.loadString(
-        'assets/dua_data/dua-dhikr/${widget.categorySlug}/${widget.language}.json',
+      final rows = await OasisMMDatabase.getDuasByCategory(
+        widget.categoryId,
+        language: widget.language,
       );
-      final List<dynamic> data = json.decode(response);
+
       setState(() {
-        _duas = data.map((json) => DuaItem.fromJson(json)).toList();
+        _duas = rows.map((row) {
+          return DuaItem(
+            id: row['id']?.toString() ?? '',
+            title: row['title'] ?? '',
+            arabic: row['arabic_text'] ?? '',
+            latin: row['transliteration'] ?? '',
+            translation: row['translation'] ?? '',
+            source: row['reference'] ?? '',
+            fawaid: row['benefits'] ?? '',
+            notes: '',
+          );
+        }).toList();
         _isLoading = false;
       });
     } catch (e) {
+      debugPrint('Error loading duas in detail view: $e');
       setState(() {
         _isLoading = false;
       });
@@ -116,7 +130,7 @@ class _DuaDetailViewScreenState extends State<DuaDetailViewScreen> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: GlassCard(
-        isDark: isDark,
+        isDarkForce: isDark,
         borderRadius: 24,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

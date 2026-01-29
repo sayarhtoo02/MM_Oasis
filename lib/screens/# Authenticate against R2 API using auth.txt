@@ -1,0 +1,123 @@
+# Authenticate against R2 API using auth tokens
+
+The following example shows how to authenticate against R2 using the S3 API and an API token.
+Note
+For providing secure access to bucket objects for anonymous users, we recommend using [pre-signed URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/) instead.
+Pre-signed URLs do not require users to be a member of your organization and enable direct programmatic access to R2.
+Ensure you have set the following environment variables prior to running either example. Refer to [Authentication](https://developers.cloudflare.com/r2/api/tokens/) for more information.
+
+```
+export AWS_REGION=autoexport AWS_ENDPOINT_URL=https://<account_id>.r2.cloudflarestorage.comexport AWS_ACCESS_KEY_ID=your_access_key_idexport AWS_SECRET_ACCESS_KEY=your_secret_access_key
+```
+
+
+```
+export AWS_REGION=autoexport AWS_ENDPOINT_URL=https://<account_id>.r2.cloudflarestorage.comexport AWS_ACCESS_KEY_ID=your_access_key_idexport AWS_SECRET_ACCESS_KEY=your_secret_access_key
+```
+
+-  [JavaScript](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2602) 
+-  [Python](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2603) 
+-  [Go](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2604) 
+[JavaScript](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2602)
+[Python](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2603)
+[Go](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2604)
+Install the @aws-sdk/client-s3 package for the S3 API:
+
+```
+@aws-sdk/client-s3
+```
+
+-  [npm](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2599) 
+-  [yarn](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2600) 
+-  [pnpm](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2601) 
+[npm](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2599)
+[yarn](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2600)
+[pnpm](https://developers.cloudflare.com/r2/examples/authenticate-r2-auth-tokens/#tab-panel-2601)
+
+```
+npm i @aws-sdk/client-s3
+```
+
+
+```
+npm i @aws-sdk/client-s3
+```
+
+
+```
+yarn add @aws-sdk/client-s3
+```
+
+
+```
+yarn add @aws-sdk/client-s3
+```
+
+
+```
+pnpm add @aws-sdk/client-s3
+```
+
+
+```
+pnpm add @aws-sdk/client-s3
+```
+
+Run the following Node.js script with node index.js. Ensure you change Bucket to the name of your bucket, and Key to point to an existing file in your R2 bucket.
+
+```
+node index.js
+```
+
+
+```
+Bucket
+```
+
+
+```
+Key
+```
+
+Note, tutorial below should function for TypeScript as well.
+
+```
+import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3"; const s3 = new S3Client(); const Bucket = "<YOUR_BUCKET_NAME>";const Key = "pfp.jpg"; const object = await s3.send( new GetObjectCommand({ Bucket, Key, }),); console.log("Successfully fetched the object", object.$metadata); // Process the data as needed// For example, to get the content as a Buffer:// const content = data.Body; // Or to save the file (requires 'fs' module):// import { writeFile } from "node:fs/promises";// await writeFile('ingested_0001.parquet', data.Body);
+```
+
+
+```
+import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3"; const s3 = new S3Client(); const Bucket = "<YOUR_BUCKET_NAME>";const Key = "pfp.jpg"; const object = await s3.send( new GetObjectCommand({ Bucket, Key, }),); console.log("Successfully fetched the object", object.$metadata); // Process the data as needed// For example, to get the content as a Buffer:// const content = data.Body; // Or to save the file (requires 'fs' module):// import { writeFile } from "node:fs/promises";// await writeFile('ingested_0001.parquet', data.Body);
+```
+
+Install the boto3 S3 API client:
+
+```
+boto3
+```
+
+
+```
+pip install boto3
+```
+
+
+```
+pip install boto3
+```
+
+Run the following Python script with python3 get_r2_object.py. Ensure you change bucket to the name of your bucket, and object_key to point to an existing file in your R2 bucket.
+
+```
+python3 get_r2_object.py
+```
+
+
+```
+bucket
+```
+
+
+```
+object_key
+```

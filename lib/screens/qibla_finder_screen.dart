@@ -175,12 +175,14 @@ class _QiblaFinderScreenState extends State<QiblaFinderScreen>
           children: [
             GlassAppBar(
               title: "Qibla Finder",
-              isDark: true, // Qibla Finder always dark per design preference
+              isDark: context
+                  .watch<SettingsProvider>()
+                  .isDarkMode, // Use theme setting
               actions: [
                 // Location Refresh Action
                 Consumer<SettingsProvider>(
                   builder: (context, settings, child) {
-                    final isDark = true; // Forced Dark
+                    final isDark = settings.isDarkMode; // Use theme setting
                     final accentColor = GlassTheme.accent(isDark);
                     final textColor = GlassTheme.text(isDark);
 
@@ -689,11 +691,14 @@ class _QiblaFinderScreenState extends State<QiblaFinderScreen>
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Finding Qibla direction...',
+
             style: TextStyle(
               fontSize: 16,
-              color: Colors.white,
+              color: GlassTheme.text(
+                Provider.of<SettingsProvider>(context).isDarkMode,
+              ),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -722,12 +727,14 @@ class _QiblaFinderScreenState extends State<QiblaFinderScreen>
               ),
             ),
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'Location Service Disabled',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: GlassTheme.text(
+                  Provider.of<SettingsProvider>(context).isDarkMode,
+                ),
               ),
               textAlign: TextAlign.center,
             ),
@@ -736,7 +743,9 @@ class _QiblaFinderScreenState extends State<QiblaFinderScreen>
               'Please enable location services to find the Qibla direction',
               style: TextStyle(
                 fontSize: 15,
-                color: Colors.white.withValues(alpha: 0.8),
+                color: GlassTheme.text(
+                  Provider.of<SettingsProvider>(context).isDarkMode,
+                ).withValues(alpha: 0.8),
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -787,12 +796,14 @@ class _QiblaFinderScreenState extends State<QiblaFinderScreen>
               ),
             ),
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'Location Permission Required',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: GlassTheme.text(
+                  Provider.of<SettingsProvider>(context).isDarkMode,
+                ),
               ),
               textAlign: TextAlign.center,
             ),

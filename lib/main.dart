@@ -47,23 +47,124 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: 'https://lgmbvrtkulhwylmwhoou.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnbWJ2cnRrdWxod3lsbXdob291Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDc5NTIsImV4cCI6MjA4MzI4Mzk1Mn0.MUl09e5NufjdyO0J0kP1u9BETBTQuNOMgvAXXuEsx_o',
-  );
+  // Initialize with safe fallbacks for all devices
+  DuaProvider? duaProvider;
+  NotificationService? notificationService;
+  ShopNotificationService? shopNotificationService;
 
-  // Initialize sqflite for desktop platforms
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+  try {
+    // 1. Critical Initialization (Must run first)
+    await Supabase.initialize(
+      url: 'https://lgmbvrtkulhwylmwhoou.supabase.co',
+      anonKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnbWJ2cnRrdWxod3lsbXdob291Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDc5NTIsImV4cCI6MjA4MzI4Mzk1Mn0.MUl09e5NufjdyO0J0kP1u9BETBTQuNOMgvAXXuEsx_o',
+    );
+  } catch (e) {
+    debugPrint('Supabase init error: $e');
   }
 
-  // Initialize notifications
+  // Initialize sqflite for desktop platforms
+  try {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+  } catch (e) {
+    debugPrint('Desktop DB init error: $e');
+  }
+
+  // 2. Initialize Providers & Services (with fallbacks)
+  duaProvider = DuaProvider();
+  notificationService = NotificationService(flutterLocalNotificationsPlugin);
+  shopNotificationService = ShopNotificationService(
+    notificationService,
+    navigatorKey,
+  );
+
+  // 3. Parallel Initialization of Independent Async Tasks (with error handling)
+  try {
+    await Future.wait([
+      // A. Load All Duas (Heavy JSON)
+      duaProvider.loadAllDuas().catchError((e) {
+        debugPrint('Dua loading error: $e');
+      }),
+
+      // B. Initialize Widget Service (SharedPreferences)
+      WidgetService.initialize().catchError((e) {
+        debugPrint('Widget service init error: $e');
+      }),
+
+      // C. Initialize Notifications Plugin
+      _initNotifications().catchError((e) {
+        debugPrint('Notifications init error: $e');
+      }),
+
+      // D. Initialize Background Service (can fail on some devices)
+      BackgroundServiceManager.initializeService().catchError((e) {
+        debugPrint('Background service init error: $e');
+      }),
+    ]);
+  } catch (e) {
+    debugPrint('Parallel init error: $e');
+  }
+
+  // 4. Post-Init Setup (Sequential requirements) - All wrapped in try-catch
+  try {
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestNotificationsPermission();
+  } catch (e) {
+    debugPrint('Notification permission error: $e');
+  }
+
+  try {
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'shop_orders',
+      'Shop Order Notifications',
+      description: 'Notifications for shop order monitoring',
+      importance: Importance.high,
+    );
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(channel);
+
+    // NOW start the background service after channel is ready
+    await BackgroundServiceManager.startService();
+  } catch (e) {
+    debugPrint('Notification channel error: $e');
+  }
+
+  try {
+    await BackgroundServiceManager.requestUnrestrictedBattery();
+  } catch (e) {
+    debugPrint('Battery optimization error: $e');
+  }
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) =>
+              SettingsProvider(SettingsRepository(), notificationService!),
+        ),
+        ChangeNotifierProvider(create: (_) => duaProvider!),
+        ChangeNotifierProvider(create: (_) => QuranProvider()),
+        ChangeNotifierProvider(create: (_) => HadithProvider()),
+        ChangeNotifierProvider(create: (_) => RamadanProvider()),
+        ChangeNotifierProvider.value(value: shopNotificationService),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+
+Future<void> _initNotifications() async {
   const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings(
-        '@mipmap/launcher_icon',
-      ); // Use standard launcher icon
+      AndroidInitializationSettings('@mipmap/launcher_icon');
   const DarwinInitializationSettings initializationSettingsIOS =
       DarwinInitializationSettings(
         requestAlertPermission: true,
@@ -78,73 +179,11 @@ void main() async {
     initializationSettings,
     onDidReceiveNotificationResponse:
         (NotificationResponse notificationResponse) async {
-          // Handle notification tap when app is in foreground
           debugPrint(
             'onDidReceiveNotificationResponse: ${notificationResponse.payload}',
           );
         },
     onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
-  );
-
-  // Request permissions for Android 13+
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin
-      >()
-      ?.requestNotificationsPermission();
-
-  final duaProvider = DuaProvider();
-  await duaProvider.loadAllDuas();
-
-  // Initialize notification service
-  final notificationService = NotificationService(
-    flutterLocalNotificationsPlugin,
-  );
-
-  // Register Shop Notification Service Global Instance
-  final shopNotificationService = ShopNotificationService(
-    notificationService,
-    navigatorKey,
-  );
-
-  // Initialize widget service
-  await WidgetService.initialize();
-
-  // Create notification channel BEFORE starting foreground service (required for Android 8+)
-  const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'shop_orders', // Must match the channel ID in BackgroundServiceManager
-    'Shop Order Notifications',
-    description: 'Notifications for shop order monitoring',
-    importance: Importance.high,
-  );
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin
-      >()
-      ?.createNotificationChannel(channel);
-
-  // Initialize Background Service (Foreground Service for notifications)
-  await BackgroundServiceManager.initializeService();
-  // Request Battery Unrestricted status
-  await BackgroundServiceManager.requestUnrestrictedBattery();
-
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (_) =>
-              SettingsProvider(SettingsRepository(), notificationService),
-        ),
-        ChangeNotifierProvider(create: (_) => duaProvider),
-        ChangeNotifierProvider(create: (_) => QuranProvider()),
-        ChangeNotifierProvider(create: (_) => HadithProvider()),
-        ChangeNotifierProvider(create: (_) => RamadanProvider()),
-        ChangeNotifierProvider.value(
-          value: shopNotificationService,
-        ), // Inject Global ShopNotificationService
-      ],
-      child: const MyApp(),
-    ),
   );
 }
 

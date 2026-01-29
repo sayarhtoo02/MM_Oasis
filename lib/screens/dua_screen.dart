@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:munajat_e_maqbool_app/models/dua_item.dart';
 import 'package:munajat_e_maqbool_app/screens/dua_detail_view_screen.dart';
+import 'package:munajat_e_maqbool_app/services/database/oasismm_database.dart';
 import '../providers/settings_provider.dart';
 import '../config/glass_theme.dart';
 import '../widgets/glass/glass_scaffold.dart';
@@ -28,13 +28,22 @@ class _DuaScreenState extends State<DuaScreen> {
   }
 
   Future<void> _loadCategories() async {
-    final String response = await rootBundle.loadString(
-      'assets/dua_data/core/categories.json',
-    );
-    final data = json.decode(response);
-    setState(() {
-      _categories = List<Map<String, dynamic>>.from(data[_selectedLanguage]);
-    });
+    try {
+      final rows = await OasisMMDatabase.getDuaCategories();
+      setState(() {
+        _categories = rows.map((row) {
+          final names = json.decode(row['name'] as String);
+          return {
+            'id': row['id'],
+            'slug': row['category_key'],
+            'name': names[_selectedLanguage] ?? names['en'],
+            'description': row['description'],
+          };
+        }).toList();
+      });
+    } catch (e) {
+      debugPrint('Error loading categories: $e');
+    }
   }
 
   @override
@@ -75,6 +84,7 @@ class _DuaScreenState extends State<DuaScreen> {
                   itemBuilder: (context, index) {
                     final category = _categories[index];
                     return _buildCategoryCard(
+                      category['id'],
                       category['name'],
                       category['slug'],
                       _getCategoryIcon(category['slug']),
@@ -91,6 +101,7 @@ class _DuaScreenState extends State<DuaScreen> {
   }
 
   Widget _buildCategoryCard(
+    int id,
     String name,
     String slug,
     IconData icon,
@@ -105,7 +116,7 @@ class _DuaScreenState extends State<DuaScreen> {
       child: Column(
         children: [
           GlassCard(
-            isDark: isDark,
+            isDarkForce: isDark,
             borderRadius: 16,
             padding: EdgeInsets.zero,
             onTap: () {
@@ -159,11 +170,11 @@ class _DuaScreenState extends State<DuaScreen> {
           ),
           if (isExpanded)
             GlassCard(
-              isDark: isDark,
+              isDarkForce: isDark,
               borderRadius: 16,
               padding: const EdgeInsets.all(12),
               child: FutureBuilder<List<DuaItem>>(
-                future: _loadDuas(slug),
+                future: _loadDuas(id),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Padding(
@@ -215,7 +226,7 @@ class _DuaScreenState extends State<DuaScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
-        isDark: isDark,
+        isDarkForce: isDark,
         borderRadius: 16,
         padding: EdgeInsets.zero,
         onTap: () {
@@ -223,6 +234,9 @@ class _DuaScreenState extends State<DuaScreen> {
             context,
             MaterialPageRoute(
               builder: (context) => DuaDetailViewScreen(
+                categoryId: _categories.firstWhere(
+                  (c) => c['slug'] == slug,
+                )['id'],
                 categoryName: _categories.firstWhere(
                   (c) => c['slug'] == slug,
                 )['name'],
@@ -274,12 +288,28 @@ class _DuaScreenState extends State<DuaScreen> {
     );
   }
 
-  Future<List<DuaItem>> _loadDuas(String slug) async {
-    final String response = await rootBundle.loadString(
-      'assets/dua_data/dua-dhikr/$slug/$_selectedLanguage.json',
-    );
-    final List<dynamic> data = json.decode(response);
-    return data.map((json) => DuaItem.fromJson(json)).toList();
+  Future<List<DuaItem>> _loadDuas(int categoryId) async {
+    try {
+      final rows = await OasisMMDatabase.getDuasByCategory(
+        categoryId,
+        language: _selectedLanguage,
+      );
+      return rows.map((row) {
+        return DuaItem(
+          id: row['id']?.toString() ?? '',
+          title: row['title'] ?? '',
+          arabic: row['arabic_text'] ?? '',
+          latin: row['transliteration'] ?? '',
+          translation: row['translation'] ?? '',
+          source: row['reference'] ?? '',
+          fawaid: row['benefits'] ?? '',
+          notes: '', // Notes not in DB currently?
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('Error loading preview duas: $e');
+      return [];
+    }
   }
 
   IconData _getCategoryIcon(String slug) {

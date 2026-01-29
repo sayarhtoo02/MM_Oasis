@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:munajat_e_maqbool_app/screens/main_app_shell.dart';
 
 import 'package:provider/provider.dart';
 import 'package:munajat_e_maqbool_app/config/glass_theme.dart';
@@ -32,9 +33,15 @@ class _ShopListScreenState extends State<ShopListScreen>
 
   List<Map<String, dynamic>> _shops = [];
   List<Map<String, dynamic>>? _searchResults;
-  List<Map<String, dynamic>> _filteredShops = [];
   bool _isLoading = true;
   bool _isSearchingLoading = false;
+
+  // Pagination State
+  int _currentPage = 0;
+  final int _pageSize = 10;
+  bool _hasMore = true;
+  bool _isLoadMoreRunning = false;
+
   String? _selectedCategory;
   LocationData? _userLocation;
 
@@ -53,49 +60,102 @@ class _ShopListScreenState extends State<ShopListScreen>
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadData(); // Initial load
+    _scrollController.addListener(_scrollListener);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _debounce?.cancel();
-    _scrollController.dispose();
+    _scrollController.dispose(); // Listener removed automatically
     super.dispose();
   }
 
+  void _scrollListener() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoading &&
+        !_isLoadMoreRunning &&
+        _hasMore &&
+        _searchResults == null) {
+      _loadMore();
+    }
+  }
+
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _currentPage = 0;
+      _shops.clear();
+      _hasMore = true;
+    });
+
     try {
       final results = await Future.wait([
-        _shopService.getShops(),
+        _shopService.getShops(
+          limit: _pageSize,
+          offset: 0,
+          category: _selectedCategory,
+        ),
         LocationService().getLocation(),
       ]);
 
       if (mounted) {
+        final newShops = results[0] as List<Map<String, dynamic>>;
         setState(() {
-          _shops = results[0] as List<Map<String, dynamic>>;
+          _shops = newShops;
           _userLocation = results[1] as LocationData?;
           _searchResults = null;
-          _applyFilter();
+
+          if (newShops.length < _pageSize) {
+            _hasMore = false;
+          }
+
           _isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('Error loading data: $e');
       if (mounted) {
-        if (_shops.isEmpty) {
-          final shops = await _shopService.getShops();
-          if (mounted) {
-            setState(() {
-              _shops = shops;
-              _applyFilter();
-              _isLoading = false;
-            });
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadMoreRunning || !_hasMore) return;
+
+    setState(() => _isLoadMoreRunning = true);
+
+    try {
+      final nextPage = _currentPage + 1;
+      final offset = nextPage * _pageSize;
+
+      final newShops = await _shopService.getShops(
+        limit: _pageSize,
+        offset: offset,
+        category: _selectedCategory,
+      );
+
+      if (mounted) {
+        setState(() {
+          if (newShops.isNotEmpty) {
+            _shops.addAll(newShops);
+            _currentPage = nextPage;
           }
-        } else {
-          setState(() => _isLoading = false);
-        }
+
+          if (newShops.length < _pageSize) {
+            _hasMore = false;
+          }
+
+          _isLoadMoreRunning = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Load more error: $e');
+      if (mounted) {
+        setState(() => _isLoadMoreRunning = false);
       }
     }
   }
@@ -106,7 +166,8 @@ class _ShopListScreenState extends State<ShopListScreen>
       if (query.isEmpty) {
         setState(() {
           _searchResults = null;
-          _applyFilter();
+          _searchResults = null;
+          _loadData(); // Restore main list
         });
       } else {
         _performSearch(query);
@@ -121,7 +182,8 @@ class _ShopListScreenState extends State<ShopListScreen>
       if (mounted) {
         setState(() {
           _searchResults = results;
-          _applyFilter();
+          _searchResults = results;
+          // _applyFilter(); // Removed
           _isSearchingLoading = false;
         });
       }
@@ -131,22 +193,16 @@ class _ShopListScreenState extends State<ShopListScreen>
     }
   }
 
-  void _applyFilter() {
-    List<Map<String, dynamic>> source = _searchResults ?? _shops;
-
-    if (_selectedCategory == null) {
-      _filteredShops = source;
-    } else {
-      _filteredShops = source
-          .where((s) => s['category'] == _selectedCategory)
-          .toList();
-    }
-  }
+  // No longer needed as filtering is server-side
+  // void _applyFilter() { ... }
 
   void _setCategory(String? category) {
+    if (_selectedCategory == category) return;
+
     setState(() {
       _selectedCategory = category;
-      _applyFilter();
+      // Selecting a category triggers a reload (server-side filter)
+      _loadData();
     });
   }
 
@@ -203,13 +259,16 @@ class _ShopListScreenState extends State<ShopListScreen>
         return Scaffold(
           backgroundColor: GlassTheme.background(isDark),
           extendBody: true,
-          floatingActionButton: FloatingActionButton(
-            onPressed: _onAddShop,
-            elevation: 8,
-            backgroundColor: accentColor,
-            child: Icon(
-              Icons.add_business_rounded,
-              color: isDark ? Colors.black : Colors.white,
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 80.0), // Clear bottom nav
+            child: FloatingActionButton(
+              onPressed: _onAddShop,
+              elevation: 8,
+              backgroundColor: accentColor,
+              child: Icon(
+                Icons.add_business_rounded,
+                color: isDark ? Colors.black : Colors.white,
+              ),
             ),
           ),
           body: Stack(
@@ -234,13 +293,22 @@ class _ShopListScreenState extends State<ShopListScreen>
                       expandedHeight: 140.0,
                       floating: false,
                       pinned: true,
+                      leading: IconButton(
+                        icon: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: textColor,
+                        ),
+                        onPressed: () {
+                          mainAppShellKey.currentState?.closeFeature();
+                        },
+                      ),
                       backgroundColor: GlassTheme.glassGradient(
                         isDark,
                       ).first.withValues(alpha: 0.9),
                       elevation: 0,
                       flexibleSpace: FlexibleSpaceBar(
                         titlePadding: const EdgeInsets.only(
-                          left: 16,
+                          left: 56,
                           bottom: 16,
                         ),
                         title: Text(
@@ -412,7 +480,7 @@ class _ShopListScreenState extends State<ShopListScreen>
                           child: CircularProgressIndicator(color: accentColor),
                         ),
                       )
-                    else if (_filteredShops.isEmpty)
+                    else if (_shops.isEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: Center(
@@ -454,13 +522,44 @@ class _ShopListScreenState extends State<ShopListScreen>
                       )
                     else
                       SliverList(
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          return _buildStaggeredListItem(
-                            index,
-                            _filteredShops[index],
-                            _userLocation,
-                          );
-                        }, childCount: _filteredShops.length),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            // Display Search Results if available
+                            if (_searchResults != null) {
+                              return _buildStaggeredListItem(
+                                index,
+                                _searchResults![index],
+                                _userLocation,
+                              );
+                            }
+
+                            // Display Paginated List
+                            if (index < _shops.length) {
+                              return _buildStaggeredListItem(
+                                index,
+                                _shops[index],
+                                _userLocation,
+                              );
+                            } else {
+                              // Loading indicator at bottom
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 32,
+                                ),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: accentColor,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          // Count: if search, use search length.
+                          // If normal, use shops.length + 1 for loader (if hasMore).
+                          childCount: _searchResults != null
+                              ? _searchResults!.length
+                              : _shops.length + (_hasMore ? 1 : 0),
+                        ),
                       ),
 
                     // Extra padding at bottom for FAB

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 import '../models/dua_model.dart';
 import '../models/reading_analytics.dart';
 import '../services/analytics_service.dart';
+import '../services/database/oasismm_database.dart';
 
 class DuaProvider extends ChangeNotifier {
   List<Dua> _allDuas = [];
@@ -18,16 +18,44 @@ class DuaProvider extends ChangeNotifier {
       return; // Load only once
     }
     try {
-      final String response = await rootBundle.loadString(
-        'assets/munajat.json',
-      );
-      final List<dynamic> data = json.decode(response);
-      _allDuas = data.map((json) => Dua.fromJson(json)).toList();
+      final rows = await OasisMMDatabase.getMunajat();
+      _allDuas = rows.map((row) => _duaFromRow(row)).toList();
       _isLoaded = true;
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading duas: $e');
     }
+  }
+
+  Dua _duaFromRow(Map<String, dynamic> row) {
+    // Try to parse from data_json if available
+    if (row['data_json'] != null) {
+      try {
+        final jsonData = json.decode(row['data_json'] as String);
+        return Dua.fromJson(jsonData);
+      } catch (_) {}
+    }
+
+    return Dua(
+      id: row['id']?.toString() ?? '',
+      manzilNumber: row['manzil_number'] ?? 1,
+      day: row['day'] ?? '',
+      pageNumber: row['page_number'] ?? 1,
+      source: row['source'],
+      arabicText: row['arabic_text'] ?? '',
+      translations: Translations(
+        urdu: row['translation_urdu'] ?? '',
+        english: row['translation'] ?? '',
+        burmese: row['translation_burmese'] ?? '',
+      ),
+      faida: Faida(
+        urdu: row['faida_urdu'],
+        english: row['faida_english'],
+        burmese: row['faida_burmese'],
+      ),
+      audioUrl: row['audio_url'],
+      notes: row['notes'],
+    );
   }
 
   void startReadingSession() {
@@ -41,7 +69,6 @@ class DuaProvider extends ChangeNotifier {
     final duration = endTime.difference(_sessionStartTime!);
 
     if (duration.inSeconds > 5) {
-      // Only track sessions longer than 5 seconds
       final session = ReadingSession(
         duaId: dua.id,
         manzilNumber: dua.manzilNumber,

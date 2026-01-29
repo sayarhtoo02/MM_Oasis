@@ -7,6 +7,7 @@ import '../models/quran_ayah.dart';
 import '../models/mashaf_models.dart';
 import '../services/offline_quran_service.dart';
 import '../services/mashaf_service.dart';
+import '../services/reading_stats_service.dart';
 
 class QuranProvider extends ChangeNotifier {
   final OfflineQuranService _quranService = OfflineQuranService();
@@ -16,12 +17,8 @@ class QuranProvider extends ChangeNotifier {
   final Map<int, List<QuranAyah>> _ayahsCache = {};
   bool _isLoading = false;
   String _selectedLanguage = 'english';
-  String _selectedTranslationKey = 'ghazimohammadha'; // Default to Ghazi Hashim
-  final List<String> _availableTranslations = [
-    'basein',
-    'ghazimohammadha',
-    'hashimtinmyint',
-  ];
+  List<String> _selectedTranslationKeys = ['ghazi']; // Default to Ghazi Hashim
+  final List<String> _availableTranslations = ['basein', 'ghazi', 'hashim'];
 
   // Mashaf Mode State
   bool _isMashafMode = false;
@@ -36,7 +33,7 @@ class QuranProvider extends ChangeNotifier {
   List<QuranSurah> get surahs => _surahs;
   bool get isLoading => _isLoading;
   String get selectedLanguage => _selectedLanguage;
-  String get selectedTranslationKey => _selectedTranslationKey;
+  List<String> get selectedTranslationKeys => _selectedTranslationKeys;
   List<String> get availableTranslations => _availableTranslations;
 
   bool get isMashafMode => _isMashafMode;
@@ -45,6 +42,11 @@ class QuranProvider extends ChangeNotifier {
 
   Map<String, dynamic>? get lastRead => _lastRead;
   List<Map<String, dynamic>> get bookmarks => _bookmarks;
+
+  // Compatibility getter for single translation key
+  String get selectedTranslationKey => _selectedTranslationKeys.isNotEmpty
+      ? _selectedTranslationKeys.first
+      : 'ghazi';
 
   QuranProvider() {
     _loadPreferences();
@@ -71,8 +73,18 @@ class QuranProvider extends ChangeNotifier {
     _isMashafMode = prefs.getBool('quran_is_mashaf_mode') ?? false;
 
     // Load Translation Preference
-    _selectedTranslationKey =
-        prefs.getString('quran_selected_translation') ?? 'basein';
+    final savedTranslations = prefs.getStringList(
+      'quran_selected_translations',
+    );
+    if (savedTranslations != null && savedTranslations.isNotEmpty) {
+      _selectedTranslationKeys = savedTranslations;
+    } else {
+      // Fallback to legacy single key if exists
+      final legacyKey = prefs.getString('quran_selected_translation');
+      if (legacyKey != null) {
+        _selectedTranslationKeys = [legacyKey];
+      }
+    }
 
     notifyListeners();
   }
@@ -92,6 +104,10 @@ class QuranProvider extends ChangeNotifier {
       'timestamp': DateTime.now().toIso8601String(),
     };
     await prefs.setString('quran_last_read', json.encode(_lastRead));
+
+    // Record progress in stats database
+    await ReadingStatsService.markAyahRead(surahNumber, ayahNumber);
+
     notifyListeners();
   }
 
@@ -185,11 +201,11 @@ class QuranProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Search in the currently selected translation
-      _searchResults = await _quranService.searchAyahs(
-        query,
-        _selectedTranslationKey,
-      );
+      // Search in the first selected translation by default for now
+      final searchKey = _selectedTranslationKeys.isNotEmpty
+          ? _selectedTranslationKeys.first
+          : 'basein';
+      _searchResults = await _quranService.searchAyahs(query, searchKey);
     } catch (e) {
       debugPrint('Error searching: $e');
       _searchResults = [];
@@ -217,13 +233,31 @@ class QuranProvider extends ChangeNotifier {
   }
 
   Future<void> setTranslationKey(String key) async {
-    if (_selectedTranslationKey != key &&
-        _availableTranslations.contains(key)) {
-      _selectedTranslationKey = key;
+    if (_availableTranslations.contains(key)) {
+      _selectedTranslationKeys = [key];
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('quran_selected_translation', key);
+      await prefs.setStringList('quran_selected_translations', [key]);
       notifyListeners();
     }
+  }
+
+  Future<void> toggleTranslationKey(String key) async {
+    if (!_availableTranslations.contains(key)) return;
+
+    if (_selectedTranslationKeys.contains(key)) {
+      if (_selectedTranslationKeys.length > 1) {
+        _selectedTranslationKeys.remove(key);
+      }
+    } else {
+      _selectedTranslationKeys.add(key);
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      'quran_selected_translations',
+      _selectedTranslationKeys,
+    );
+    notifyListeners();
   }
 
   // Mashaf Mode Methods
@@ -269,6 +303,23 @@ class QuranProvider extends ChangeNotifier {
 
   Future<int> getPageForAyah(int surahNumber, int ayahNumber) async {
     return await _mashafService.getPageForAyah(surahNumber, ayahNumber);
+  }
+
+  Future<void> recordPageProgress(int pageNumber) async {
+    try {
+      final verses = await _mashafService.getVersesOnPage(pageNumber);
+      if (verses.isNotEmpty) {
+        await ReadingStatsService.markPageRead(verses);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error recording page progress: $e');
+    }
+  }
+
+  Future<void> resetTracking() async {
+    await ReadingStatsService.resetAllTracking();
+    notifyListeners();
   }
 
   Future<void> clearCache() async {

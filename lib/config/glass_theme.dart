@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class GlassTheme {
   // Light Mode Colors
@@ -68,5 +69,9 @@ class GlassTheme {
         offset: const Offset(0, 10),
       ),
     ];
+  }
+
+  static SystemUiOverlayStyle systemOverlayStyle(bool isDark) {
+    return isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
   }
 }

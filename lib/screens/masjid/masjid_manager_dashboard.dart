@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:munajat_e_maqbool_app/config/glass_theme.dart';
-import 'package:munajat_e_maqbool_app/widgets/glass/glass_scaffold.dart';
 import 'package:munajat_e_maqbool_app/widgets/glass/glass_card.dart';
 import 'package:munajat_e_maqbool_app/providers/settings_provider.dart';
 import 'package:munajat_e_maqbool_app/services/masjid_service.dart';
@@ -379,9 +378,9 @@ class _JamatTimeEditorDialogState extends State<_JamatTimeEditorDialog> {
   @override
   void initState() {
     super.initState();
-    ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jummah'].forEach((key) {
+    for (var key in ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jummah']) {
       _controllers[key] = TextEditingController();
-    });
+    }
     _loadCurrentTimes();
   }
 

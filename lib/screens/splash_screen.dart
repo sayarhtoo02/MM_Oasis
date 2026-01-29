@@ -37,23 +37,43 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateToMainScreen() async {
-    // Request permissions while the splash screen is showing
-    await PermissionService().requestAllPermissions();
+    // Start the timer. We wait for 2 seconds for branding.
+    // Permissions are requested AFTER the delay to prevent animation lag.
+    await Future.delayed(const Duration(seconds: 2));
 
-    await Future.delayed(const Duration(seconds: 4));
+    // Wrap permission requests in try-catch to prevent crash on different devices
+    try {
+      await PermissionService().requestAllPermissions();
+    } catch (e) {
+      debugPrint('Permission request error (non-fatal): $e');
+    }
+
     if (mounted) {
-      final prefs = await SharedPreferences.getInstance();
-      final onboardingCompleted =
-          prefs.getBool('onboarding_completed') ?? false;
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => onboardingCompleted
-              ? MainAppShell(key: mainAppShellKey)
-              : const OnboardingScreen(),
-        ),
-      );
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final onboardingCompleted =
+            prefs.getBool('onboarding_completed') ?? false;
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => onboardingCompleted
+                ? MainAppShell(key: mainAppShellKey)
+                : const OnboardingScreen(),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Navigation error: $e');
+        // Fallback: Navigate to main shell anyway
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MainAppShell(key: mainAppShellKey),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -251,6 +271,26 @@ class _HangingItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
+      // OPTIMIZATION: Build the static subtree once and pass it as 'child'
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // The string/line holding the item
+          Container(
+            width: 2,
+            height: height * 0.3, // Top 30% is string
+            color: const Color(0xFFE0B40A),
+          ),
+          // The SVG Item
+          SvgPicture.asset(
+            assetPath,
+            height: height * 0.7,
+            colorFilter: color != null
+                ? ColorFilter.mode(color!, BlendMode.srcIn)
+                : null,
+          ),
+        ],
+      ),
       builder: (context, child) {
         // Calculate sway using sine wave for pendulum effect
         // Adding delay phase shift
@@ -260,25 +300,7 @@ class _HangingItem extends StatelessWidget {
         return Transform(
           transform: Matrix4.rotationZ(angle),
           alignment: Alignment.topCenter, // Pivot at text/string attachment
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // The string/line holding the item
-              Container(
-                width: 2,
-                height: height * 0.3, // Top 30% is string
-                color: const Color(0xFFE0B40A),
-              ),
-              // The SVG Item
-              SvgPicture.asset(
-                assetPath,
-                height: height * 0.7,
-                colorFilter: color != null
-                    ? ColorFilter.mode(color!, BlendMode.srcIn)
-                    : null,
-              ),
-            ],
-          ),
+          child: child,
         );
       },
     );

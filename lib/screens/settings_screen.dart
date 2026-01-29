@@ -1,3 +1,4 @@
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -101,10 +102,21 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   int _versionTapCount = 0;
   DateTime? _lastVersionTap;
+  String _version = '';
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _version = 'v${info.version} (${info.buildNumber})';
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _loadVersion();
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -607,7 +619,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         GestureDetector(
           onTap: () => _handleVersionTap(context),
           child: Text(
-            'Munajat-e-Maqbool v1.0.0',
+            'Munajat-e-Maqbool $_version',
             style: TextStyle(
               color: textColor.withValues(alpha: 0.4),
               fontSize: 12,

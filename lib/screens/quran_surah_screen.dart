@@ -573,8 +573,8 @@ class _QuranSurahScreenState extends State<QuranSurahScreen> {
   void _showTranslationSelector() {
     final translationNames = {
       'basein': 'ဦးဘစိန်ဘာသာပြန်',
-      'ghazimohammadha': 'ဃာဇီဟာရှင်မ်ဘာသာပြန်',
-      'hashimtinmyint': 'ဟာရှင်မ်တင်မြင့်ဘာသာပြန်',
+      'ghazi': 'ဃာဇီဟာရှင်မ်ဘာသာပြန်',
+      'hashim': 'ဟာရှင်မ်တင်မြင့်ဘာသာပြန်',
     };
 
     showDialog(
@@ -631,8 +631,8 @@ class _QuranSurahScreenState extends State<QuranSurahScreen> {
     final provider = Provider.of<QuranProvider>(context, listen: false);
     final translationNames = {
       'basein': 'ဦးဘစိန်',
-      'ghazimohammadha': 'ဃာဇီဟာရှင်မ်',
-      'hashimtinmyint': 'ဟာရှင်မ်တင်မြင့်',
+      'ghazi': 'ဃာဇီဟာရှင်မ်',
+      'hashim': 'ဟာရှင်မ်တင်မြင့်',
     };
     final buffer = StringBuffer(ayah.text);
     if (ayah.translations != null) {
@@ -658,8 +658,8 @@ class _QuranSurahScreenState extends State<QuranSurahScreen> {
     final provider = Provider.of<QuranProvider>(context, listen: false);
     final translationNames = {
       'basein': 'ဦးဘစိန်',
-      'ghazimohammadha': 'ဃာဇီဟာရှင်မ်',
-      'hashimtinmyint': 'ဟာရှင်မ်တင်မြင့်',
+      'ghazi': 'ဃာဇီဟာရှင်မ်',
+      'hashim': 'ဟာရှင်မ်တင်မြင့်',
     };
     final translationKey = provider.selectedTranslationKey;
     final translation = ayah.translations?[translationKey] ?? '';

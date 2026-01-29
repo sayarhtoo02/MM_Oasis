@@ -16,7 +16,7 @@ class AdsBannerWidget extends StatefulWidget {
 
 class _AdsBannerWidgetState extends State<AdsBannerWidget> {
   final AdsService _adsService = AdsService();
-  final PageController _pageController = PageController(viewportFraction: 0.5);
+  late PageController _pageController; // Changed to late
   List<Map<String, dynamic>> _ads = [];
   Timer? _autoScrollTimer;
   int _currentPage = 0;
@@ -24,6 +24,7 @@ class _AdsBannerWidgetState extends State<AdsBannerWidget> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(viewportFraction: 0.96); // Wider peek
     _loadAds();
   }
 
@@ -80,23 +81,46 @@ class _AdsBannerWidgetState extends State<AdsBannerWidget> {
 
         return Column(
           children: [
-            Container(
-              margin: const EdgeInsets.only(bottom: 4),
-              height: 72,
+            AspectRatio(
+              aspectRatio: 3.0, // Strict 3:1 Ratio
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: _ads.length,
-                padEnds: false,
+                padEnds:
+                    false, // Ensure first item starts at edge if desired, or true for center
                 onPageChanged: (index) {
                   setState(() => _currentPage = index);
                 },
                 itemBuilder: (context, index) {
                   final ad = _ads[index];
-                  return _buildAdSlide(ad, isDark, textColor, accentColor);
+                  // Animated scale for focus effect
+                  return AnimatedBuilder(
+                    animation: _pageController,
+                    builder: (context, child) {
+                      double value = 1.0;
+                      if (_pageController.position.haveDimensions) {
+                        value = _pageController.page! - index;
+                        value = (1 - (value.abs() * 0.1)).clamp(0.9, 1.0);
+                      }
+                      return Center(
+                        child: SizedBox(
+                          height:
+                              Curves.easeOut.transform(value) *
+                              300, // Dynamic height constraint
+                          width:
+                              Curves.easeOut.transform(value) *
+                              500, // Dynamic width constraint
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _buildAdSlide(ad, isDark, textColor, accentColor),
+                  );
                 },
               ),
             ),
-            // Page indicators (dots)
+            // Page indicators (dots) - Keep them close
+            const SizedBox(height: 8),
             if (_ads.length > 1)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

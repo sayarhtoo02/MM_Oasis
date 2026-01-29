@@ -4,11 +4,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 
+import 'package:munajat_e_maqbool_app/services/r2_storage_service.dart';
+
 class MasjidImageService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final ImagePicker _picker = ImagePicker();
-
-  static const String _bucketName = 'masjid-images';
+  final R2StorageService _r2Storage = R2StorageService();
 
   /// Pick image from gallery
   Future<File?> pickImageFromGallery() async {
@@ -46,7 +47,7 @@ class MasjidImageService {
     return null;
   }
 
-  /// Upload image to Supabase Storage
+  /// Upload image to R2 Storage
   Future<String?> uploadImage({
     required File file,
     required String masjidId,
@@ -56,20 +57,15 @@ class MasjidImageService {
       final ext = path.extension(file.path);
       final fileName =
           '${masjidId}_${imageType}_${DateTime.now().millisecondsSinceEpoch}$ext';
-      final storagePath = '$masjidId/$fileName';
+      final storagePath = 'masjid-images/$masjidId/$fileName';
 
-      await _supabase.storage
-          .from(_bucketName)
-          .upload(
-            storagePath,
-            file,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-          );
+      // Upload to R2
+      final publicUrl = await _r2Storage.uploadFile(
+        file: file,
+        path: storagePath,
+        contentType: 'image/${ext.replaceAll('.', '')}',
+      );
 
-      // Get public URL
-      final publicUrl = _supabase.storage
-          .from(_bucketName)
-          .getPublicUrl(storagePath);
       return publicUrl;
     } catch (e) {
       debugPrint('Upload error: $e');

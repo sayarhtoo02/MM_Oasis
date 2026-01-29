@@ -81,20 +81,32 @@ class ShopService {
     }
   }
 
-  /// Fetch all approved shops (visible to users)
-  Future<List<Map<String, dynamic>>> getShops() async {
+  /// Fetch approved shops with pagination and optional category filter
+  Future<List<Map<String, dynamic>>> getShops({
+    int limit = 10,
+    int offset = 0,
+    String? category,
+  }) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .schema('munajat_app')
           .from('shops')
           .select()
-          .eq('status', 'approved')
-          .order('created_at', ascending: false);
+          .eq('status', 'approved');
+
+      if (category != null && category != 'All') {
+        query = query.eq('category', category);
+      }
+
+      final response = await query
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
 
       final shops = List<Map<String, dynamic>>.from(response);
       final enriched = await _enrichShopsWithSubscription(shops);
 
-      // Sort by priority if needed
+      // Sort by priority if needed (Client-side sort of the fetched chunk)
+      // Note: Ideally priority sort should happen on DB, but for now we sort the page.
       enriched.sort((a, b) {
         final aPrio = (a['priority_listing'] == true) ? 1 : 0;
         final bPrio = (b['priority_listing'] == true) ? 1 : 0;

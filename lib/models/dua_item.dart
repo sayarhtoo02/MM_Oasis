@@ -1,4 +1,5 @@
 class DuaItem {
+  final String? id;
   final String title;
   final String arabic;
   final String latin;
@@ -8,6 +9,7 @@ class DuaItem {
   final String source;
 
   DuaItem({
+    this.id,
     required this.title,
     required this.arabic,
     required this.latin,

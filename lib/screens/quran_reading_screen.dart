@@ -90,6 +90,11 @@ class _QuranReadingScreenState extends State<QuranReadingScreen> {
       final page = await provider.getSurahStartPage(_currentSurahNumber);
       if (mounted) {
         _jumpToPage(page);
+
+        // Record initial progress for Mashaf view
+        if (_viewMode == ViewMode.mashaf) {
+          provider.recordPageProgress(page);
+        }
       }
     }
   }
@@ -363,6 +368,12 @@ class _QuranReadingScreenState extends State<QuranReadingScreen> {
         }
       });
       _saveLastRead();
+
+      // RECORD PROGRESS
+      // In Mashaf mode, we record the entire page's verses
+      if (_viewMode == ViewMode.mashaf) {
+        provider.recordPageProgress(page + 1);
+      }
     }
   }
 
@@ -431,14 +442,14 @@ class _QuranReadingScreenState extends State<QuranReadingScreen> {
                         _buildTranslationOption(
                           provider,
                           'ဃာဇီဟာရှင်မ်',
-                          'ghazimohammadha',
+                          'ghazi',
                           isDark,
                           textColor,
                         ),
                         _buildTranslationOption(
                           provider,
                           'ဟာရှင်မ်တင်မြင့်',
-                          'hashimtinmyint',
+                          'hashim',
                           isDark,
                           textColor,
                         ),
@@ -461,18 +472,17 @@ class _QuranReadingScreenState extends State<QuranReadingScreen> {
     bool isDark,
     Color textColor,
   ) {
-    return RadioListTile<String>(
+    final isSelected = provider.selectedTranslationKeys.contains(key);
+    return CheckboxListTile(
       title: Text(label, style: TextStyle(color: textColor)),
-      value: key,
-      groupValue: provider.selectedTranslationKey,
+      value: isSelected,
       onChanged: (value) {
-        if (value != null) {
-          provider.setTranslationKey(value);
-          Navigator.pop(context);
-        }
+        provider.toggleTranslationKey(key);
       },
       activeColor: GlassTheme.accent(isDark),
+      checkColor: isDark ? Colors.black : Colors.white,
       contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.leading,
     );
   }
 

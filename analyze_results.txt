@@ -1,0 +1,47 @@
+Total Database Size: 180.08 MB
+-----------------------------------------------------------------
+Table Name                     | Count      | Est. Size (MB) 
+-----------------------------------------------------------------
+hadiths                        | 40943      | 117.55         
+translations                   | 18708      | 13.52          
+translations_fts               | 18708      | 13.20          
+indopak_words                  | 83668      | 3.92           
+surah_info                     | 164        | 2.65           
+translations_fts_data          | 702        | 2.55           
+mashaf_pages                   | 9131       | 1.37           
+verses                         | 6236       | 1.31           
+verses_fts                     | 6236       | 1.27           
+verses_fts_data                | 151        | 0.54           
+munajat                        | 285        | 0.51           
+duas                           | 291        | 0.33           
+sunnah_items                   | 243        | 0.10           
+translations_fts_docsize       | 18708      | 0.10           
+quran_ruku                     | 558        | 0.08           
+quran_ayah_metadata            | 6236       | 0.05           
+quran_rub                      | 240        | 0.03           
+verses_fts_docsize             | 6236       | 0.03           
+hadith_chapters                | 429        | 0.03           
+allah_names                    | 99         | 0.02           
+quran_hizb                     | 60         | 0.01           
+quran_juz                      | 30         | 0.01           
+sunnah_chapters                | 33         | 0.00           
+surahs                         | 114        | 0.00           
+translations_fts_idx           | 253        | 0.00           
+quran_manzil                   | 7          | 0.00           
+_migration_info                | 1          | 0.00           
+hadith_books                   | 9          | 0.00           
+dua_categories                 | 5          | 0.00           
+sunnah_book_info               | 1          | 0.00           
+verses_fts_idx                 | 54         | 0.00           
+quran_sajda                    | 15         | 0.00           
+sqlite_sequence                | 12         | 0.00           
+verses_fts_config              | 1          | 0.00           
+translations_fts_config        | 1          | 0.00           
+tafseer                        | 0          | 0.00           
+indopak_glyphs                 | 0          | 0.00           
+qpc_glyphs                     | 0          | 0.00           
+
+Detailed breakdown of specific content types:
+mashaf_pages (data_json): 1302.02 KB
+munajat (data_json): 295.63 KB
+sunnah_items (references_json): 8.20 KB

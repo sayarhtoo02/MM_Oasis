@@ -66,9 +66,8 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
   void _startSessionForCurrentDua() async {
     final duaProvider = Provider.of<DuaProvider>(context, listen: false);
     duaProvider.startReadingSession();
-    final statsService = ReadingStatsService();
-    await statsService.updateReadingStreak();
-    await statsService.incrementDuasRead();
+    await ReadingStatsService.updateReadingStreak();
+    await ReadingStatsService.incrementDuasRead();
   }
 
   void _endSessionForCurrentDua() {
@@ -363,7 +362,6 @@ class _DuaDetailScreenState extends State<DuaDetailScreen> {
                 const SizedBox(height: 25),
                 // Audio Player in a Glass Card
                 GlassCard(
-                  isDark: isDark,
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: DuaAudioPlayerManager(

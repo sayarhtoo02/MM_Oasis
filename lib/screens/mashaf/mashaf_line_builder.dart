@@ -2,7 +2,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../models/mashaf_models.dart';
 import 'surah_header_data.dart';
-import 'tajweed_renderer.dart';
 
 /// Builds text lines for Mashaf pages
 class MashafLineBuilder {
@@ -113,122 +112,6 @@ class MashafLineBuilder {
       letterSpacing: 0,
     );
 
-    // Group words by Ayah
-    final List<InlineSpan> spans = [];
-    List<MashafWord> currentAyahWords = [];
-    int? currentSurah;
-    int? currentAyah;
-
-    void flushAyah() {
-      if (currentAyahWords.isEmpty) return;
-
-      final ayahText = currentAyahWords.map((w) => w.text).join(' ');
-      final tajweedData = currentAyahWords
-          .map((w) => w.textTajweed ?? '')
-          .join('| :100|');
-
-      final isSelected =
-          selectedAyah != null &&
-          selectedAyah!['surah'] == currentSurah &&
-          selectedAyah!['ayah'] == currentAyah;
-
-      final span = TajweedRenderer.buildTextSpan(
-        context,
-        ayahText,
-        textStyle.copyWith(
-          backgroundColor: isSelected
-              ? const Color(0xFF0D3B2E).withValues(alpha: 0.1)
-              : null,
-        ),
-        tajweedData: tajweedData,
-      );
-
-      // Wrap in a recognizer span
-      spans.add(
-        TextSpan(
-          children: [
-            span,
-            const TextSpan(text: ' '),
-          ], // Add space
-          recognizer: TapGestureRecognizer()
-            ..onTap = () {
-              if (onAyahTap != null &&
-                  currentSurah != null &&
-                  currentAyah != null) {
-                onAyahTap!(currentSurah, currentAyah);
-              }
-            },
-        ),
-      );
-
-      currentAyahWords = [];
-    }
-
-    for (final word in line.words) {
-      if (currentSurah != word.surah || currentAyah != word.ayah) {
-        flushAyah();
-        currentSurah = word.surah;
-        currentAyah = word.ayah;
-      }
-
-      // DEDUPLICATION: Skip redundant stop signs (rumuz)
-      // Sometimes the database includes rumuz as a separate "word"
-      // even if it's already attached to the previous word's Tajweed data.
-      bool isRedundant = false;
-      if (currentAyahWords.isNotEmpty) {
-        final lastWord = currentAyahWords.last;
-        final currentWordText = word.text.trim();
-
-        // Broad range for Indopak rumuz, ayah markers, and decorations
-        // Includes private use area (around \uF500) where Indopak markers live
-        final rumuzRegex = RegExp(
-          r'^[\u0610-\u061A\u06D6-\u06ED\uF500-\uF5FF\s]+$',
-        );
-
-        if (rumuzRegex.hasMatch(currentWordText)) {
-          // Get the full text rendered by the last word (including Tajweed parts)
-          String lastWordRenderedText = lastWord.text;
-          if (lastWord.textTajweed != null) {
-            lastWordRenderedText = lastWord.textTajweed!
-                .split('|')
-                .map(
-                  (s) =>
-                      s.contains(':') ? s.substring(0, s.lastIndexOf(':')) : s,
-                )
-                .join('');
-          }
-
-          if (lastWordRenderedText.contains(currentWordText) ||
-              lastWord.text.contains(currentWordText)) {
-            isRedundant = true;
-          }
-        }
-      }
-
-      if (!isRedundant) {
-        currentAyahWords.add(word);
-      }
-    }
-    flushAyah();
-
-    if (isCentered) {
-      return Padding(
-        padding: EdgeInsets.zero,
-        child: Directionality(
-          textDirection: TextDirection.rtl,
-          child: Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: RichText(
-                text: TextSpan(children: spans),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
     return Padding(
       padding: EdgeInsets.zero,
       child: Directionality(
@@ -237,32 +120,81 @@ class MashafLineBuilder {
           builder: (context, constraints) {
             final availableWidth = constraints.maxWidth;
 
-            // Calculate width to decide layout.
-            // MUST include the word padding (2px per word) to prevent right overflow.
-            double totalWordsWidth = 0;
+            // Calculate natural width of words at current fontSize
+            double naturalWidth = 0;
+            const double wordSpacing =
+                2.0; // horizontal padding (1.0 on each side)
+
             for (final word in line.words) {
               final tp = TextPainter(
                 text: TextSpan(text: word.text, style: textStyle),
                 textDirection: TextDirection.rtl,
               )..layout();
-              totalWordsWidth += tp.width + 2; // +2 for horizontal padding
+              naturalWidth += tp.width + wordSpacing;
             }
 
-            // If it fits, we can use RichText directly.
-            // Note: The original code used Row for justified look when it fits.
-            // But Row breaks our single-span-per-ayah logic if an Ayah is split across widgets?
-            // Actually, if we use RichText with TextAlign.justify, it might work better.
-            // But Flutter's RichText justify is not always perfect for Arabic.
-            // The original code used Row(mainAxisAlignment: MainAxisAlignment.spaceBetween)
-            // This spreads words evenly.
-            // To keep interaction working, we can still use Row, but each child must be a GestureDetector.
+            if (isCentered) {
+              final List<InlineSpan> spans = [];
+              int? currentSurah;
+              int? currentAyah;
+              StringBuffer ayahTextBuffer = StringBuffer();
 
-            // Use a small safety buffer (5px) to prevent sub-pixel overflow issues.
-            // We always use Full Justification (spaceBetween) to keep words trapped
-            // between the page corners as requested.
-            if (totalWordsWidth <= availableWidth - 5 &&
-                line.words.length > 1) {
-              // Use Row for Full Justification
+              void flushAyah() {
+                if (ayahTextBuffer.isEmpty) return;
+                final text = ayahTextBuffer.toString();
+                final surah = currentSurah;
+                final ayah = currentAyah;
+                final isSelected =
+                    selectedAyah != null &&
+                    selectedAyah!['surah'] == surah &&
+                    selectedAyah!['ayah'] == ayah;
+
+                spans.add(
+                  TextSpan(
+                    text: text,
+                    style: textStyle.copyWith(
+                      backgroundColor: isSelected
+                          ? const Color(0xFF0D3B2E).withValues(alpha: 0.1)
+                          : null,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () {
+                        if (onAyahTap != null &&
+                            surah != null &&
+                            ayah != null) {
+                          onAyahTap!(surah, ayah);
+                        }
+                      },
+                  ),
+                );
+                ayahTextBuffer.clear();
+              }
+
+              for (final word in line.words) {
+                if (currentSurah != word.surah || currentAyah != word.ayah) {
+                  flushAyah();
+                  currentSurah = word.surah;
+                  currentAyah = word.ayah;
+                }
+                if (ayahTextBuffer.isNotEmpty) ayahTextBuffer.write(' ');
+                ayahTextBuffer.write(word.text);
+              }
+              flushAyah();
+
+              return Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: RichText(
+                    text: TextSpan(children: spans),
+                    textAlign: TextAlign.center,
+                    textScaler: TextScaler.noScaling,
+                  ),
+                ),
+              );
+            }
+
+            // For normal lines, use Row for "corners trapped" justification
+            if (line.words.length > 1) {
               final wordWidgets = line.words.map((word) {
                 final isSelected =
                     selectedAyah != null &&
@@ -280,41 +212,80 @@ class MashafLineBuilder {
                     color: isSelected
                         ? const Color(0xFF0D3B2E).withValues(alpha: 0.1)
                         : null,
-                    child: TajweedRenderer.buildRichText(
-                      context,
+                    child: Text(
                       word.text,
-                      textStyle,
-                      tajweedData: word.textTajweed,
+                      style: textStyle,
+                      textScaler: TextScaler.noScaling,
                     ),
                   ),
                 );
               }).toList();
 
-              return SizedBox(
-                width: availableWidth,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.center,
-                  child: SizedBox(
-                    width: availableWidth,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: wordWidgets,
+              // SMART SIZING LOGIC:
+              // 1. If line is narrower than screen -> Spread words to edges (Justify)
+              // 2. If line is wider than screen -> Scale down the whole row (Fit)
+
+              if (naturalWidth < availableWidth - 5) {
+                // CASE 1: STRETCH (Normal Justification)
+                return SizedBox(
+                  width: availableWidth,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    textDirection: TextDirection.rtl,
+                    children: wordWidgets,
+                  ),
+                );
+              } else {
+                // CASE 2: SHRINK (Scaled to Fit)
+                // We use IntrinsicWidth to let Row calculate its actual width,
+                // then FittedBox scales it down into availableWidth.
+                return SizedBox(
+                  width: availableWidth,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.center,
+                    child: IntrinsicWidth(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        textDirection: TextDirection.rtl,
+                        children: wordWidgets,
+                      ),
+                    ),
+                  ),
+                );
+              }
+            } else if (line.words.isNotEmpty) {
+              // Single word line
+              final word = line.words.first;
+              final isSelected =
+                  selectedAyah != null &&
+                  selectedAyah!['surah'] == word.surah &&
+                  selectedAyah!['ayah'] == word.ayah;
+
+              return Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () {
+                    if (onAyahTap != null) {
+                      onAyahTap!(word.surah, word.ayah);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 1),
+                    color: isSelected
+                        ? const Color(0xFF0D3B2E).withValues(alpha: 0.1)
+                        : null,
+                    child: Text(
+                      word.text,
+                      style: textStyle,
+                      textScaler: TextScaler.noScaling,
                     ),
                   ),
                 ),
               );
-            } else {
-              // Use FittedBox with RichText
-              return FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: RichText(
-                  text: TextSpan(children: spans),
-                  textAlign: TextAlign.right,
-                ),
-              );
             }
+
+            return const SizedBox.shrink();
           },
         ),
       ),

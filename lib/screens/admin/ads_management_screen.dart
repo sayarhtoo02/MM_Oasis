@@ -4,13 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:munajat_e_maqbool_app/services/r2_storage_service.dart';
 import 'package:munajat_e_maqbool_app/config/glass_theme.dart';
 import 'package:munajat_e_maqbool_app/widgets/glass/glass_scaffold.dart';
 import 'package:munajat_e_maqbool_app/widgets/glass/glass_card.dart';
 import 'package:munajat_e_maqbool_app/providers/settings_provider.dart';
 import 'package:munajat_e_maqbool_app/services/ads_service.dart';
-import 'package:munajat_e_maqbool_app/services/admin_supabase_client.dart';
 
 class AdsManagementScreen extends StatefulWidget {
   const AdsManagementScreen({super.key});
@@ -21,8 +20,6 @@ class AdsManagementScreen extends StatefulWidget {
 
 class _AdsManagementScreenState extends State<AdsManagementScreen> {
   final AdsService _adsService = AdsService();
-  // Use admin client for storage operations (bypasses RLS)
-  final SupabaseClient _supabase = AdminSupabaseClient.client;
   List<Map<String, dynamic>> _ads = [];
   bool _isLoading = true;
 
@@ -43,20 +40,29 @@ class _AdsManagementScreenState extends State<AdsManagementScreen> {
     }
   }
 
-  Future<String?> _uploadImage(File imageFile) async {
-    final fileName = 'ad_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final path = 'ads-banners/$fileName';
+  Future<String> _uploadImage(File image, String shopId) async {
+    try {
+      final R2StorageService r2Storage = R2StorageService();
+      final String fileName =
+          'ads/${shopId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-    debugPrint('Uploading image to: shop-images/$path');
+      // Upload to R2
+      // Originally uploaded to 'shop-images' bucket
+      final String? publicUrl = await r2Storage.uploadFile(
+        file: image,
+        path: 'shop-images/$fileName',
+        contentType: 'image/jpeg',
+      );
 
-    // Upload the file
-    await _supabase.storage.from('shop-images').upload(path, imageFile);
-    debugPrint('Upload successful');
+      if (publicUrl == null) {
+        throw 'Failed to upload image to R2';
+      }
 
-    // Get public URL
-    final url = _supabase.storage.from('shop-images').getPublicUrl(path);
-    debugPrint('Public URL: $url');
-    return url;
+      return publicUrl;
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      rethrow;
+    }
   }
 
   Future<void> _showAdDialog({Map<String, dynamic>? ad}) async {
@@ -105,9 +111,22 @@ class _AdsManagementScreenState extends State<AdsManagementScreen> {
                   const SizedBox(height: 16),
 
                   // Image Upload Section
-                  const Text(
-                    'Banner Image',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Banner Image',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Recommended: 900x300 (3:1)',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
@@ -117,23 +136,23 @@ class _AdsManagementScreenState extends State<AdsManagementScreen> {
                         source: ImageSource.gallery,
                       );
                       if (picked != null) {
-                        // Crop the image with 2:1 aspect ratio for banner
+                        // Crop the image with 3:1 aspect ratio for banner
                         final croppedFile = await ImageCropper().cropImage(
                           sourcePath: picked.path,
                           aspectRatio: const CropAspectRatio(
-                            ratioX: 2,
+                            ratioX: 3,
                             ratioY: 1,
                           ),
                           uiSettings: [
                             AndroidUiSettings(
-                              toolbarTitle: 'Crop Banner Image',
+                              toolbarTitle: 'Crop Banner Image (3:1)',
                               toolbarColor: const Color(0xFF0D3B2E),
                               toolbarWidgetColor: Colors.white,
                               initAspectRatio: CropAspectRatioPreset.ratio16x9,
                               lockAspectRatio: true,
                             ),
                             IOSUiSettings(
-                              title: 'Crop Banner Image',
+                              title: 'Crop Banner Image (3:1)',
                               aspectRatioLockEnabled: true,
                             ),
                           ],
@@ -278,7 +297,7 @@ class _AdsManagementScreenState extends State<AdsManagementScreen> {
           ).showSnackBar(const SnackBar(content: Text('Uploading image...')));
         }
         try {
-          finalImageUrl = await _uploadImage(selectedImage!);
+          finalImageUrl = await _uploadImage(selectedImage!, 'ads_management');
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

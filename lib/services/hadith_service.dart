@@ -1,14 +1,15 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
 import '../models/hadith.dart';
 import '../models/hadith_book.dart';
+import 'database/oasismm_database.dart';
 
 class HadithService {
   static final HadithService _instance = HadithService._internal();
   factory HadithService() => _instance;
   HadithService._internal();
 
-  final Map<String, Map<String, dynamic>> _cache = {};
+  // Cache for book data
+  final Map<String, HadithBook> _bookCache = {};
+  final Map<String, List<Hadith>> _hadithCache = {};
 
   static const Map<String, String> bookNames = {
     'bukhari': 'Sahih al Bukhari',
@@ -23,18 +24,41 @@ class HadithService {
   };
 
   Future<HadithBook> getBookMetadata(String bookKey) async {
-    final cacheKey = '${bookKey}_metadata';
-
-    if (_cache.containsKey(cacheKey)) {
-      return HadithBook.fromJson(_cache[cacheKey]!);
+    if (_bookCache.containsKey(bookKey)) {
+      return _bookCache[bookKey]!;
     }
 
-    final path = 'assets/hadits_data/$bookKey.json';
-    final jsonString = await rootBundle.loadString(path);
-    final data = json.decode(jsonString);
+    final bookData = await OasisMMDatabase.getHadithBookByKey(bookKey);
+    if (bookData == null) {
+      throw Exception('Book not found: $bookKey');
+    }
 
-    _cache[cacheKey] = data;
-    return HadithBook.fromJson(data);
+    final bookId = bookData['id'] as int;
+    final chapters = await OasisMMDatabase.getHadithChapters(bookId);
+
+    final book = HadithBook(
+      id: bookId,
+      metadata: {
+        'english': {
+          'title': bookData['name_english'] ?? bookNames[bookKey] ?? bookKey,
+        },
+        'arabic': {'title': bookData['name_arabic'] ?? ''},
+        'author': bookData['author_english'] ?? '',
+      },
+      chapters: chapters
+          .map(
+            (c) => Chapter(
+              id: c['id'] as int,
+              bookId: bookId,
+              english: c['name_english'] ?? '',
+              arabic: c['name_arabic'] ?? '',
+            ),
+          )
+          .toList(),
+    );
+
+    _bookCache[bookKey] = book;
+    return book;
   }
 
   Future<List<Hadith>> getHadithsByChapter(
@@ -42,31 +66,24 @@ class HadithService {
     int chapterId,
   ) async {
     try {
-      final path = 'assets/hadits_data/$bookKey.json';
-      // Optimization: In a real app, we might want to cache this or read partially.
-      // For now, since we already likely loaded it for metadata, we can reuse if cached,
-      // but getBookMetadata caches the whole JSON map, so we can just use that if available.
-
-      final cacheKey = '${bookKey}_metadata';
-      Map<String, dynamic> data;
-
-      if (_cache.containsKey(cacheKey)) {
-        data = _cache[cacheKey]!;
-      } else {
-        final jsonString = await rootBundle.loadString(path);
-        data = json.decode(jsonString);
-        _cache[cacheKey] = data;
+      final cacheKey = '${bookKey}_$chapterId';
+      if (_hadithCache.containsKey(cacheKey)) {
+        return _hadithCache[cacheKey]!;
       }
 
-      final allHadiths = (data['hadiths'] as List)
-          .map((h) => Hadith.fromJson(h))
-          .toList();
+      final bookData = await OasisMMDatabase.getHadithBookByKey(bookKey);
+      if (bookData == null) return [];
 
-      final filtered = allHadiths
-          .where((h) => h.chapterId == chapterId)
-          .toList();
+      final bookId = bookData['id'] as int;
+      final hadithRows = await OasisMMDatabase.getHadithsByChapter(
+        bookId,
+        chapterId,
+      );
 
-      return filtered;
+      final hadiths = hadithRows.map((h) => Hadith.fromDbRow(h)).toList();
+      _hadithCache[cacheKey] = hadiths;
+
+      return hadiths;
     } catch (e) {
       return [];
     }
@@ -77,40 +94,40 @@ class HadithService {
     dynamic hadithNumber,
   ) async {
     try {
-      final cacheKey = '${bookKey}_metadata';
-      Map<String, dynamic> data;
+      final bookData = await OasisMMDatabase.getHadithBookByKey(bookKey);
+      if (bookData == null) return null;
 
-      if (_cache.containsKey(cacheKey)) {
-        data = _cache[cacheKey]!;
-      } else {
-        final path = 'assets/hadits_data/$bookKey.json';
-        final jsonString = await rootBundle.loadString(path);
-        data = json.decode(jsonString);
-        _cache[cacheKey] = data;
+      final bookId = bookData['id'] as int;
+      final searchStr = hadithNumber.toString().trim();
+
+      // Try exact match first
+      final hadithRow = await OasisMMDatabase.getHadithByNumber(
+        bookId,
+        searchStr,
+      );
+      if (hadithRow != null) {
+        return Hadith.fromDbRow(hadithRow);
       }
 
-      final hadiths = (data['hadiths'] as List)
-          .map((h) => Hadith.fromJson(h))
-          .toList();
-
-      final searchStr = hadithNumber.toString().trim();
-      // Regex to match the number optionally followed by letters (e.g. 1245 matches 1245a, 1245b)
+      // Fallback: search in all hadiths for partial match
+      final allHadiths = await OasisMMDatabase.getAllHadithsForBook(bookId);
       final regex = RegExp('^$searchStr[a-z]*\$', caseSensitive: false);
 
-      try {
-        return hadiths.firstWhere((h) {
-          final id = h.idInBook.toString();
-          return id == searchStr || regex.hasMatch(id);
-        });
-      } catch (_) {
-        return null;
+      for (final h in allHadiths) {
+        final id = h['hadith_number']?.toString() ?? '';
+        if (id == searchStr || regex.hasMatch(id)) {
+          return Hadith.fromDbRow(h);
+        }
       }
+
+      return null;
     } catch (e) {
       return null;
     }
   }
 
   void clearCache() {
-    _cache.clear();
+    _bookCache.clear();
+    _hadithCache.clear();
   }
 }

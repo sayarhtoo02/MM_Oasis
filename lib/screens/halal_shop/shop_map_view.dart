@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -26,7 +25,7 @@ class _ShopMapViewState extends State<ShopMapView> {
 
   List<Map<String, dynamic>> _shops = [];
   Set<Marker> _markers = {};
-  Map<String, BitmapDescriptor> _customIcons = {};
+  final Map<String, BitmapDescriptor> _customIcons = {};
   bool _isLoading = true;
   LatLng _currentPosition = const LatLng(16.8661, 96.1951); // Default: Yangon
 

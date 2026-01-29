@@ -21,6 +21,31 @@ class MasjidService {
     }
   }
 
+  /// Fetch masjids within a bounding box (lat/long)
+  Future<List<Map<String, dynamic>>> getMasjidsInBounds({
+    required double south,
+    required double west,
+    required double north,
+    required double east,
+  }) async {
+    try {
+      final response = await _supabase
+          .schema('munajat_app')
+          .from('masjids')
+          .select()
+          .eq('status', 'approved')
+          .gte('lat', south)
+          .lte('lat', north)
+          .gte('long', west)
+          .lte('long', east);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('GetMasjidsInBounds Error: $e');
+      return []; // Return empty on error to avoid crashing map
+    }
+  }
+
   /// Fetch a single masjid with its jamat times and images
   Future<Map<String, dynamic>?> getMasjidDetails(String id) async {
     try {
