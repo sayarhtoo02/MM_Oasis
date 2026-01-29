@@ -72,9 +72,8 @@ jobs:
           retention-days: 7
 
       # Build for simulator (for Appetize.io testing)
-      # Using --profile instead of --debug because debug builds don't bundle assets properly
       - name: Build iOS (Simulator)
-        run: flutter build ios --simulator --profile
+        run: flutter build ios --simulator --debug
 
       - name: Verify database in Simulator build
         run: |
